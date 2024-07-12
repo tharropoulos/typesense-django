@@ -19,6 +19,35 @@ class TypesenseCollection:
         models.DecimalField,
     }
 
+    # TODO: add image search
+    mapped_field_types = {
+        models.AutoField: 'int32',
+        models.CharField: 'string',
+        models.URLField: 'string',
+        models.TextField: 'string',
+        models.IntegerField: 'int32',
+        models.BigIntegerField: 'int64',
+        models.PositiveBigIntegerField: 'int64',
+        models.PositiveSmallIntegerField: 'int32',
+        models.PositiveIntegerField: 'int32',
+        models.SlugField: 'string',
+        models.FloatField: 'float',
+        models.BooleanField: 'bool',
+        models.DateField: 'int64',
+        models.DateTimeField: 'int64',
+        models.DecimalField: 'float64',
+        models.FloatField: 'float32',
+        models.GenericIPAddressField: 'string',
+        models.JSONField: 'string',
+        models.AutoField: 'int32',
+        models.SmallAutoField: 'int32',
+        models.BigAutoField: 'int64',
+        models.UUIDField: 'string',
+        models.EmailField: 'string',
+        models.FilePathField: 'string',
+        models.SmallIntegerField: 'int32',
+    }
+
     def __init__(
         self,
         *,
@@ -83,6 +112,7 @@ class TypesenseCollection:
         self._handle_name()
         self._handle_fields()
         self._handle_facets()
+        self._handle_typesense_fields()
     def _handle_name(self) -> None:
         """Handle name."""
         if not self.model._meta.verbose_name:
@@ -264,6 +294,54 @@ class TypesenseCollection:
         field: models.Field,
     ) -> None:
         self.children.add(field)
+
+    def _handle_typesense_fields(self) -> None:
+        """Handle Typesense fields."""
+        self.typesense_fields = [
+            {
+                'name': field.name,
+                'type': self._handle_typesense_field_type(field),
+                **({'facet': True} if field in self.facets else {}),
+            }
+            for field in self.index_fields
+        ]
+
+    def _handle_typesense_field_type(self, field: models.Field) -> str:
+        """Handle Typesense field type."""
+        if field.name == 'id':
+            return 'string'
+
+        typesense_type = self.mapped_field_types.get(field.__class__)
+
+        if typesense_type is None:
+            raise typesense_exceptions.RequestMalformed(
+                'Field type for {field} is not supported. Supported types: \n {types}'.format(
+                    field=field,
+                    types=self.mapped_field_types.keys(),
+                ),
+            )
+
+        if isinstance(field, models.DecimalField):
+            return self._handle_decimal_field(field)
+
+        return typesense_type
+
+    def _handle_decimal_field(self, field: models.DecimalField) -> str:
+        """Handle DecimalField for different sizes."""
+        max_float_value = 3.4e38
+        # Calculate the maximum value that can be represented by the field
+        max_field_value = (10 ** (field.max_digits - field.decimal_places)) - (
+            10**-field.decimal_places
+        )
+
+        # Float32 can represent values up to ~3.4E+38,
+        # but precision might be lost for values > 1E+7
+        # Float64 can represent values up to ~1.7E+308,
+        # with precision up to 15-17 decimal digits
+        if max_field_value < max_float_value and field.decimal_places <= 7:
+            return 'float32'
+
+        return 'float64'
 
     def _handle_facets(self) -> None:
         """Handle facets."""
