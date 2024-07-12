@@ -21,6 +21,7 @@ class TypesenseCollection:
         index_fields: set[models.Field] = None,
         parents: set[models.Field] = None,
         children: set[models.Field] = None,
+        facets: set[models.Field] | Literal[True] = None,
         detailed_parents: set[models.Field] | Literal[True] = None,
         detailed_children: set[models.Field] | Literal[True] = None,
     ) -> None:
@@ -33,6 +34,8 @@ class TypesenseCollection:
           meaning all fields are indexed.
         :param parents: A set of model fields representing parent relations. Defaults to None.
         :param children: A set of model fields representing child relations. Defaults to None.
+        :param facets: A set of model fields to be used as facets, or True to include all.
+            Defaults to None.
         :param detailed_parents: A set of model fields for which detailed parent information
           is required, mapping them to `object`, or True to include all. Defaults to None.
         :param detailed_children: A set of model fields for which detailed child information
@@ -41,6 +44,7 @@ class TypesenseCollection:
         """
         self.index_fields = index_fields or set()
         self.children = children or set()
+        self.facets = facets or set()
         self.parents = parents or set()
         self.detailed_parents = detailed_parents or set()
         self.detailed_children = detailed_children or set()
@@ -62,6 +66,7 @@ class TypesenseCollection:
     def _handle_all(self):
         self._handle_name()
         self._handle_fields()
+        self._handle_facets()
     def _handle_name(self) -> None:
         """Handle name."""
         if not self.model._meta.verbose_name:
@@ -201,6 +206,25 @@ class TypesenseCollection:
         field: models.Field,
     ) -> None:
         self.children.add(field)
+
+    def _handle_facets(self) -> None:
+        """Handle facets."""
+        facetable_fields = self.index_fields.union(self.parents)
+
+        if self.facets is True:
+            self.facets = facetable_fields
+
+        if not self.facets.issubset(facetable_fields):
+            raise typesense_exceptions.RequestMalformed(
+                'Facets must be a subset of index fields.',
+            )
+
+        if self.facets.intersection(self.parents) and not self.use_joins:
+            warnings.warn(
+                'Facetting on relation only affects JOINs',
+                UserWarning,
+                stacklevel=2,
+            )
 
     def _handle_detailed_relations(self) -> None:
         """Handle detailed relations."""
