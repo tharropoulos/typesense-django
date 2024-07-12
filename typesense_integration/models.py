@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections import Counter
+from typing import Tuple
 
 from django.db import models
 from django.db.models.fields.reverse_related import ForeignObjectRel
@@ -13,6 +14,11 @@ from typing_extensions import Literal
 class TypesenseCollection:
     """Class for mapping a Django model to a Typesense collection."""
 
+    mapped_geopoint_types = {
+        models.FloatField,
+        models.DecimalField,
+    }
+
     def __init__(
         self,
         *,
@@ -20,6 +26,7 @@ class TypesenseCollection:
         model: models.Model,
         index_fields: set[models.Field] = None,
         parents: set[models.Field] = None,
+        geopoints: set[Tuple[models.Field, models.Field]] = None,
         children: set[models.Field] = None,
         facets: set[models.Field] | Literal[True] = None,
         detailed_parents: set[models.Field] | Literal[True] = None,
@@ -33,6 +40,8 @@ class TypesenseCollection:
         :param index_fields: A set of model fields to be indexed. Defaults to None,
           meaning all fields are indexed.
         :param parents: A set of model fields representing parent relations. Defaults to None.
+        :param geopoints: A set of model fields representing geopoints. Should not be included in
+         `index_fields`. Defaults to None.
         :param children: A set of model fields representing child relations. Defaults to None.
         :param facets: A set of model fields to be used as facets, or True to include all.
             Defaults to None.
@@ -46,6 +55,7 @@ class TypesenseCollection:
         self.children = children or set()
         self.facets = facets or set()
         self.parents = parents or set()
+        self.geopoints = geopoints or set()
         self.detailed_parents = detailed_parents or set()
         self.detailed_children = detailed_children or set()
         self.model = model
@@ -78,6 +88,7 @@ class TypesenseCollection:
             not self.index_fields
             and not self.parents
             and not self.children
+            and not self.geopoints
         ):
             self._handle_implicit_fields()
             return
@@ -87,9 +98,19 @@ class TypesenseCollection:
     def _handle_explicit_fields(self) -> None:
         """Handle explicit fields."""
         self._handle_relations_in_index_fields()
+        self._handle_geopoints_in_index_fields()
         self._handle_mismatched_fields()
         self._handle_multiple_of_same_field_name()
         self._handle_explicit_relations()
+        self._handle_geopoints()
+
+    def _handle_geopoints_in_index_fields(self) -> None:
+        """Handle geopoints."""
+        if self._has_geopoints_in_index_fields():
+            raise typesense_exceptions.RequestMalformed(
+                'Geopoints are already present in index fields.',
+            )
+
     def _handle_relations_in_index_fields(self) -> None:
         """Handle relations in index fields."""
         relations = self._get_relations_in_index_fields()
@@ -102,6 +123,31 @@ class TypesenseCollection:
 
     def _get_relations_in_index_fields(self) -> set[models.Field]:
         return {field for field in self.index_fields if field.is_relation}
+
+    def _has_geopoints_in_index_fields(self) -> set[models.Field]:
+        for lat, long in self.geopoints:
+            return lat in self.index_fields or long in self.index_fields
+
+    def _handle_geopoints(self) -> None:
+        """Handle geopoints."""
+        for lat, long in self.geopoints:
+            lat_type = lat.__class__ in self.mapped_geopoint_types
+            long_type = long.__class__ in self.mapped_geopoint_types
+
+            if not lat_type:
+                raise typesense_exceptions.RequestMalformed(
+                    'Geopoint {geopoint} is not supported. Supported types: \n {types}'.format(
+                        geopoint=lat_type,
+                        types=self.mapped_geopoint_types,
+                    ),
+                )
+            if not long_type:
+                raise typesense_exceptions.RequestMalformed(
+                    'Geopoint {geopoint} is not supported. Supported types: \n {types}'.format(
+                        geopoint=long_type,
+                        types=self.mapped_geopoint_types,
+                    ),
+                )
 
     def _handle_explicit_relations(self) -> None:
         """Handle explicit references."""
