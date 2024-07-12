@@ -18,6 +18,8 @@ from typesense_integration.tests.collections.models import (
     ManyToManyLeftImplicit,
     ManyToManyLinkExplicit,
     Reader,
+    VerboseName,
+    VerboseRelation,
     Wrong,
 )
 
@@ -57,6 +59,45 @@ class TypesenseCollectionTests(TestCase):
 
         with self.assertRaises(typesense_exceptions.ConfigError):
             TypesenseCollection(client=Wrong, model=Author)
+
+    def test_verbose_model_name(self):
+        """Test that it can handle verbose model names."""
+        mock_client_instance = self.mock_client()
+
+        collection = TypesenseCollection(
+            client=mock_client_instance,
+            model=VerboseName,
+        )
+
+        self.assertEqual(collection.name, 'custom_name')
+
+    def test_verbose_relations(self):
+        """Test that it can handle verbose relations."""
+        mock_client_instance = self.mock_client()
+
+        collection = TypesenseCollection(
+            client=mock_client_instance,
+            model=VerboseRelation,
+            use_joins=True,
+        )
+
+        self.assertEqual(
+            collection.parents,
+            {
+                VerboseRelation._meta.get_field('custom_name'),
+            },
+        )
+
+        self.assertEqual(
+            collection.typesense_relations,
+            [
+                {
+                    'name': 'custom_name_id',
+                    'reference': 'custom_name.id',
+                    'type': 'string',
+                },
+            ],
+        )
 
     def test_one_to_many_relation(self):
         """Test one-to-many relation. The author has many books."""

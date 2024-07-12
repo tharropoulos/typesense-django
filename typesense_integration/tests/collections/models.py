@@ -90,3 +90,17 @@ class GeoPoint(models.Model):
     lat = models.FloatField()
     long = models.DecimalField(max_digits=9, decimal_places=6)
     name = models.CharField(max_length=100)
+
+
+class VerboseName(models.Model):
+    name = models.CharField(max_length=100)
+
+    class Meta:
+        verbose_name = 'Custom Name'
+
+
+class VerboseRelation(models.Model):
+    custom_name = models.ForeignKey(
+        VerboseName,
+        on_delete=models.CASCADE,
+    )
