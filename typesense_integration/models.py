@@ -117,6 +117,7 @@ class TypesenseCollection:
         self._handle_facets()
         self._handle_typesense_fields()
         self._handle_typesense_relations()
+        self._handle_typesense_geopoints()
 
     def _handle_name(self) -> None:
         """Handle name."""
@@ -309,6 +310,16 @@ class TypesenseCollection:
                 **({'facet': True} if field in self.facets else {}),
             }
             for field in self.index_fields
+        ]
+
+    def _handle_typesense_geopoints(self) -> None:
+        """Handle Typesense geopoints."""
+        self.typesense_geopoints = [
+            {
+                'name': '{long}_{lat}'.format(long=long, lat=lat),
+                'type': 'geopoint',
+            }
+            for long, lat in self.geopoints
         ]
 
     def _handle_typesense_field_type(self, field: models.Field) -> str:
