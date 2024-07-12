@@ -33,6 +33,7 @@ ALLOWED_HOSTS = []
 INSTALLED_APPS = [
     'typesense_integration',
     'typesense_integration.tests.collections',
+    'typesense_integration.tests.schema_validation',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
