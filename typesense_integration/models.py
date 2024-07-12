@@ -405,10 +405,7 @@ class TypesenseCollection:
 
         if self.use_joins:
             for field in self.parents:
-                if len(field.related_fields) > 1:
-                    raise typesense_exceptions.RequestMalformed(
-                        'Composite key {field} is not allowed'.format(field=field),
-                    )
+                self._handle_composite_foreign_key(field)
 
                 _, related_field = field.related_fields[0]
                 self.typesense_relations.append(
@@ -442,3 +439,13 @@ class TypesenseCollection:
                     'type': 'object[]',
                 },
             )
+
+    def _handle_composite_foreign_key(self, field: models.Field) -> None:
+        """Handle composite foreign keys."""
+        if self._is_composite_foreign_key(field):
+            raise typesense_exceptions.RequestMalformed(
+                'Composite key {field} is not allowed'.format(field=field),
+            )
+
+    def _is_composite_foreign_key(self, field: models.Field) -> bool:
+        return len(field.related_fields) > 1
