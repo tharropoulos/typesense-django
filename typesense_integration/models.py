@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models.fields.reverse_related import ForeignObjectRel
 from typesense import Client
 from typesense import exceptions as typesense_exceptions
+from typing_extensions import Literal
 
 
 class TypesenseCollection:
@@ -20,6 +21,8 @@ class TypesenseCollection:
         index_fields: set[models.Field] = None,
         parents: set[models.Field] = None,
         children: set[models.Field] = None,
+        detailed_parents: set[models.Field] | Literal[True] = None,
+        detailed_children: set[models.Field] | Literal[True] = None,
     ) -> None:
         """
         Initializes a new instance of TypesenseCollection.
@@ -30,10 +33,17 @@ class TypesenseCollection:
           meaning all fields are indexed.
         :param parents: A set of model fields representing parent relations. Defaults to None.
         :param children: A set of model fields representing child relations. Defaults to None.
+        :param detailed_parents: A set of model fields for which detailed parent information
+          is required, mapping them to `object`, or True to include all. Defaults to None.
+        :param detailed_children: A set of model fields for which detailed child information
+          is required, mapping them to `object[]`, or True to include all. Defaults to None.
+
         """
         self.index_fields = index_fields or set()
         self.children = children or set()
         self.parents = parents or set()
+        self.detailed_parents = detailed_parents or set()
+        self.detailed_children = detailed_children or set()
         self.model = model
         self.client = client
         self._validate_client_and_model()
@@ -184,3 +194,21 @@ class TypesenseCollection:
         field: models.Field,
     ) -> None:
         self.children.add(field)
+
+    def _handle_detailed_relations(self) -> None:
+        """Handle detailed relations."""
+        if self.detailed_parents is True:
+            self.detailed_parents = self.parents
+        if self.detailed_children is True:
+            self.detailed_children = self.children
+
+        if not self.detailed_parents.issubset(self.parents):
+            raise typesense_exceptions.RequestMalformed(
+                'Detailed references must be a subset of references.',
+            )
+
+        if not self.detailed_children.issubset(self.children):
+            raise typesense_exceptions.RequestMalformed(
+                'Detailed referenced by must be a subset of referenced by.',
+            )
+
