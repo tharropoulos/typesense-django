@@ -60,6 +60,7 @@ class TypesenseCollection:
         facets: set[models.Field] | Literal[True] = None,
         detailed_parents: set[models.Field] | Literal[True] = None,
         detailed_children: set[models.Field] | Literal[True] = None,
+        use_joins: bool = False,
         override_id: bool = False,
     ) -> None:
         """
@@ -79,6 +80,8 @@ class TypesenseCollection:
           is required, mapping them to `object`, or True to include all. Defaults to None.
         :param detailed_children: A set of model fields for which detailed child information
           is required, mapping them to `object[]`, or True to include all. Defaults to None.
+        :param use_joins: A boolean indicating whether to use joins for relations.
+          Defaults to False.
         :param override_id: A boolean indicating whether to override the default Typesense ID
           field. Defaults to False. Not needed if the model's `id` field is passed as an
           index field.
@@ -113,6 +116,8 @@ class TypesenseCollection:
         self._handle_fields()
         self._handle_facets()
         self._handle_typesense_fields()
+        self._handle_typesense_relations()
+
     def _handle_name(self) -> None:
         """Handle name."""
         if not self.model._meta.verbose_name:
@@ -379,3 +384,47 @@ class TypesenseCollection:
                 'Detailed referenced by must be a subset of referenced by.',
             )
 
+    def _handle_typesense_relations(self) -> None:
+        """Handle Typesense relations."""
+        self.typesense_relations = []
+
+        self._handle_detailed_relations()
+
+        if self.use_joins:
+            for field in self.parents:
+                if len(field.related_fields) > 1:
+                    raise typesense_exceptions.RequestMalformed(
+                        'Composite key {field} is not allowed'.format(field=field),
+                    )
+
+                related_model_name = field.related_model._meta.verbose_name
+                _, related_field = field.related_fields[0]
+                self.typesense_relations.append(
+                    {
+                        'name': '{local_field_name}_{field_related_name}'.format(
+                            local_field_name=field.name,
+                            field_related_name=related_field.name,
+                        ),
+                        'type': self._handle_typesense_field_type(related_field),
+                        'reference': '{related_model_name}.{related_field_name}'.format(
+                            related_model_name=related_model_name,
+                            related_field_name=related_field.name,
+                        ),
+                        **({'facet': True} if field in self.facets else {}),
+                    },
+                )
+
+        for reference in self.detailed_parents:
+            self.typesense_relations.append(
+                {
+                    'name': reference.name,
+                    'type': 'object',
+                },
+            )
+        for child in self.detailed_children:
+            self.typesense_relations.append(
+                {
+                    'name': child.name,
+                    'type': 'object[]',
+                },
+            )
