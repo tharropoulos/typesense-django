@@ -31,6 +31,7 @@ class TypesenseCollection:
         facets: set[models.Field] | Literal[True] = None,
         detailed_parents: set[models.Field] | Literal[True] = None,
         detailed_children: set[models.Field] | Literal[True] = None,
+        override_id: bool = False,
     ) -> None:
         """
         Initializes a new instance of TypesenseCollection.
@@ -49,6 +50,9 @@ class TypesenseCollection:
           is required, mapping them to `object`, or True to include all. Defaults to None.
         :param detailed_children: A set of model fields for which detailed child information
           is required, mapping them to `object[]`, or True to include all. Defaults to None.
+        :param override_id: A boolean indicating whether to override the default Typesense ID
+          field. Defaults to False. Not needed if the model's `id` field is passed as an
+          index field.
 
         """
         self.index_fields = index_fields or set()
@@ -56,6 +60,8 @@ class TypesenseCollection:
         self.facets = facets or set()
         self.parents = parents or set()
         self.geopoints = geopoints or set()
+        self.use_joins = use_joins
+        self.override_id = override_id
         self.detailed_parents = detailed_parents or set()
         self.detailed_children = detailed_children or set()
         self.model = model
@@ -218,10 +224,16 @@ class TypesenseCollection:
         for field in self.model._meta.get_fields():
             if not isinstance(field, (models.Field, ForeignObjectRel)):
                 continue
+            if self._validate_id_field(field):
+                continue
+
             if not field.is_relation:
                 self.index_fields.add(field)
 
             self._handle_relation_field(field)
+
+    def _validate_id_field(self, field: models.Field) -> bool:
+        return field.name == 'id' and not self.override_id
 
     def _handle_relation_field(
         self,
