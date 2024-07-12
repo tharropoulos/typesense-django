@@ -60,7 +60,14 @@ class TypesenseCollection:
             )
 
     def _handle_all(self):
+        self._handle_name()
         self._handle_fields()
+    def _handle_name(self) -> None:
+        """Handle name."""
+        if not self.model._meta.verbose_name:
+            raise typesense_exceptions.RequestMalformed('Model name is empty.')
+        self.name = self.model._meta.verbose_name
+
     def _handle_fields(self) -> None:
         if (
             not self.index_fields
