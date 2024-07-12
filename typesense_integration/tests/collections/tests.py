@@ -103,7 +103,7 @@ class TypesenseCollectionTests(TestCase):
             client=mock_client_instance,
             model=ManyToManyLinkExplicit,
         )
-        self.assertEqual(collection.name, 'manytomanylinkexplicit')
+        self.assertEqual(collection.name, 'many_to_many_link_explicit')
         self.assertEqual(
             collection.index_fields,
             set(),
@@ -297,7 +297,7 @@ class TypesenseCollectionTests(TestCase):
             use_joins=True,
         )
 
-        self.assertEqual(collection.name, 'joinonanotherfield')
+        self.assertEqual(collection.name, 'join_on_another_field')
         self.assertEqual(
             collection.index_fields,
             set(),
@@ -456,7 +456,7 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-        self.assertEqual(collection.name, 'invalidfield')
+        self.assertEqual(collection.name, 'invalid_field')
         self.assertEqual(
             collection.index_fields,
             {InvalidField._meta.get_field('valid_type')},
@@ -824,7 +824,7 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-        self.assertEqual(collection.name, 'geopoint')
+        self.assertEqual(collection.name, 'geo_point')
         self.assertEqual(
             collection.index_fields,
             {

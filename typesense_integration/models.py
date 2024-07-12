@@ -10,6 +10,8 @@ from typesense import Client
 from typesense import exceptions as typesense_exceptions
 from typing_extensions import Literal
 
+from typesense_integration.common.utils import snake_case
+
 
 class TypesenseCollection:
     """Class for mapping a Django model to a Typesense collection."""
@@ -123,7 +125,7 @@ class TypesenseCollection:
         """Handle name."""
         if not self.model._meta.verbose_name:
             raise typesense_exceptions.RequestMalformed('Model name is empty.')
-        self.name = self.model._meta.verbose_name
+        self.name = snake_case(self.model._meta.verbose_name)
 
     def _handle_fields(self) -> None:
         if (
@@ -408,7 +410,6 @@ class TypesenseCollection:
                         'Composite key {field} is not allowed'.format(field=field),
                     )
 
-                related_model_name = field.related_model._meta.verbose_name
                 _, related_field = field.related_fields[0]
                 self.typesense_relations.append(
                     {
@@ -418,7 +419,9 @@ class TypesenseCollection:
                         ),
                         'type': self._handle_typesense_field_type(related_field),
                         'reference': '{related_model_name}.{related_field_name}'.format(
-                            related_model_name=related_model_name,
+                            related_model_name=snake_case(
+                                field.related_model._meta.verbose_name,
+                            ),
                             related_field_name=related_field.name,
                         ),
                         **({'facet': True} if field in self.facets else {}),
