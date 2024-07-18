@@ -34,7 +34,7 @@ class CompositeForeignKey(models.Model):
     first = models.IntegerField()
     second = models.CharField(max_length=100)
     reference = models.ForeignObject(
-        CompositeReference(),
+        CompositeReference,
         to_fields=['first', 'second'],
         on_delete=models.CASCADE,
         from_fields=['first', 'second'],
@@ -81,7 +81,7 @@ class ManyToManyRightImplicit(models.Model):
 
 
 class Wrong:
-    def __init__(self):
+    def __init__(self) -> None:
         """This is not a model class."""
         pass
 
