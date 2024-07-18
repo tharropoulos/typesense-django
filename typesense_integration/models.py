@@ -517,7 +517,7 @@ class TypesenseCollection:
         """Handle Typesense geopoints."""
         return [
             {
-                'name': f'{long}_{lat}',
+                'name': f'{lat.name}_{long.name}',
                 'type': 'geopoint',
                 'facet': lat in self.facets or long in self.facets,
                 'index': self.utils.is_field_indexed(
@@ -531,7 +531,7 @@ class TypesenseCollection:
                     skip_index_fields=self.skip_index_fields,
                 ),
             }
-            for long, lat in self.geopoints
+            for lat, long in self.geopoints
         ]
 
     def _handle_typesense_relations(self) -> list[APIField]:
