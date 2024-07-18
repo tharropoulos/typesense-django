@@ -297,16 +297,12 @@ class TypesenseCollection:
                 'Default sorting field cannot be the ID field.',
             )
 
-        if not self.utils.is_field_indexed(
-            field,
-            index_fields=self.index_fields,
-            skip_index_fields=self.skip_index_fields,
-        ) or (
+        if (
             field not in self.non_relation_model_fields
             and field not in self.index_fields
         ):
             raise typesense_exceptions.RequestMalformed(
-                'Default sorting field must be indexed.',
+                'Default sorting field must be present schema.',
             )
 
         if field.__class__ not in self.mapped_sortable_types:
