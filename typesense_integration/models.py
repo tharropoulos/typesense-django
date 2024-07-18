@@ -227,16 +227,24 @@ class TypesenseCollection:
         self.client = kwargs.get('client')
         self.model = kwargs['model']
         self._validate_client_and_model()
-        self._handle_all()
 
-    def _validate_client_and_model(self):
         self.index_fields = kwargs.get('index_fields', set())
         self.skip_index_fields = kwargs.get('skip_index_fields', set())
         self.children = kwargs.get('children', set())
         self.parents = kwargs.get('parents', set())
+        self.name = snake_case(
+            self.utils.get_model_verbose_name_from_meta(self.model._meta),
+        )
+        self.non_relation_model_fields = self.utils.get_non_relation_fields_in_set(
+            self.model._meta.get_fields(),
+        )
         self.geopoints = kwargs.get('geopoints', set())
         self.use_joins = kwargs.get('use_joins', False)
         self.override_id = kwargs.get('override_id', False)
+        self.non_relation_skipped_fields = self.utils.get_non_relation_fields_in_set(
+            self.skip_index_fields,
+        )
+
         self._handle_fields()
 
         self.facetable_fields = self.index_fields.union(self.parents)
@@ -255,6 +263,10 @@ class TypesenseCollection:
         )
 
         self._handle_facets()
+        self.typesense_fields = self._handle_typesense_fields()
+        self.typesense_relations = self._handle_typesense_relations()
+        self.typesense_fields.extend(self._handle_typesense_geopoints())
+    def _validate_client_and_model(self) -> None:
         if not isinstance(self.client, Client):
             raise typesense_exceptions.ConfigError(
                 'Client must be an instance of Typesense Client.',
@@ -264,64 +276,100 @@ class TypesenseCollection:
                 'Model must be an instance of the default models.Model class.',
             )
 
-    def _handle_all(self):
-        self._handle_name()
-        self._handle_fields()
-        self._handle_facets()
-        self._handle_typesense_fields()
-        self._handle_typesense_relations()
-        self._handle_typesense_geopoints()
 
-    def _handle_name(self) -> None:
-        """Handle name."""
-        if not self.model._meta.verbose_name:
-            raise typesense_exceptions.RequestMalformed('Model name is empty.')
-        self.name = snake_case(self.model._meta.verbose_name)
+        if field.name == 'id':
+            raise typesense_exceptions.RequestMalformed(
+                'Default sorting field cannot be the ID field.',
+            )
+
+        if not self.utils.is_field_indexed(
+            field,
+            index_fields=self.index_fields,
+            skip_index_fields=self.skip_index_fields,
+        ) or (
+            field not in self.non_relation_model_fields
+            and field not in self.index_fields
+        ):
+            raise typesense_exceptions.RequestMalformed(
+                'Default sorting field must be indexed.',
+            )
+
+        if field.__class__ not in self.mapped_sortable_types:
+            raise typesense_exceptions.RequestMalformed(
+                'Default sorting field must be of type Integer, Float or Decimal.',
+            )
+
+        return field
+
+    def _handle_facets(self) -> None:
+        """Handle facets."""
+        if self.facets.intersection(self.parents) and not self.use_joins:
+            warnings.warn(
+                'Facetting on relation only affects JOINs',
+                UserWarning,
+                stacklevel=2,
+            )
 
     def _handle_fields(self) -> None:
-        if (
-            not self.index_fields
-            and not self.parents
-            and not self.children
-            and not self.geopoints
-        ):
-            self._handle_implicit_fields()
+        if any([self.index_fields, self.parents, self.children, self.geopoints]):
+            self._handle_explicit_fields()
             return
 
-        self._handle_explicit_fields()
+        if self.skip_index_fields:
+            self._handle_mismatched_skips()
+
+        fields = self._handle_implicit_fields()
+
+        self.index_fields = fields.get('non_relation_fields', set())
+        self.parents = fields.get('parents', set())
+        self.children = fields.get('children', set())
 
     def _handle_explicit_fields(self) -> None:
         """Handle explicit fields."""
-        self._handle_relations_in_index_fields()
+        self._handle_skipped_indexed_intersection()
         self._handle_geopoints_in_index_fields()
+        self._handle_relations_in_index_fields()
         self._handle_mismatched_fields()
+        self._handle_mismatched_skips()
         self._handle_multiple_of_same_field_name()
         self._handle_explicit_relations()
         self._handle_geopoints()
 
+    def _handle_skipped_indexed_intersection(self) -> None:
+        """Handle fields intersection."""
+        intersection = self.index_fields.intersection(self.non_relation_skipped_fields)
+
+        if intersection:
+            raise typesense_exceptions.RequestMalformed(
+                'Fields {fields} are present in both index and skip index fields.'.format(
+                    fields=intersection,
+                ),
+            )
+
     def _handle_geopoints_in_index_fields(self) -> None:
         """Handle geopoints."""
-        if self._has_geopoints_in_index_fields():
+        if self.utils.is_tuple_element_in_set(
+            field_set=self.index_fields,
+            tup_set=self.geopoints,
+        ):
             raise typesense_exceptions.RequestMalformed(
                 'Geopoints are already present in index fields.',
             )
 
     def _handle_relations_in_index_fields(self) -> None:
-        """Handle relations in index fields."""
-        relations = self._get_relations_in_index_fields()
+        """
+        Handle relations in index fields.
+
+        This shouldn't be possible, as relations are not allowed in index fields.
+        But if untyped, it will be a set of Any, so we need to check.
+        """
+        relations = self.utils.get_relation_fields_in_set(self.index_fields)  # type: ignore[arg-type]
         if relations:
             raise typesense_exceptions.RequestMalformed(
                 'Relations {relations} are not allowed in index fields.'.format(
                     relations=relations,
                 ),
             )
-
-    def _get_relations_in_index_fields(self) -> set[models.Field]:
-        return {field for field in self.index_fields if field.is_relation}
-
-    def _has_geopoints_in_index_fields(self) -> set[models.Field]:
-        for lat, long in self.geopoints:
-            return lat in self.index_fields or long in self.index_fields
 
     def _handle_geopoints(self) -> None:
         """Handle geopoints."""
@@ -351,52 +399,47 @@ class TypesenseCollection:
 
     def _handle_explicit_relations(self) -> None:
         """Handle explicit references."""
-        mismatched_references, mismatched_referenced_by = (
-            self._get_mismatched_relations()
+        mismatched_parents, mismatched_children = self.utils.get_mismatched_relations(
+            children=self.children,
+            parents=self.parents,
+            model=self.model,
         )
-        if mismatched_references:
+
+        if mismatched_parents:
             raise typesense_exceptions.RequestMalformed(
                 'Model {model} has no foreign relations {relations}.'.format(
                     model=self.model._meta.model,
-                    relations=mismatched_references,
+                    relations=mismatched_parents,
                 ),
             )
 
-        if mismatched_referenced_by:
+        if mismatched_children:
             raise typesense_exceptions.RequestMalformed(
                 'Model {model} has no foreign relations {relations}.'.format(
                     model=self.model._meta.model,
-                    relations=mismatched_referenced_by,
+                    relations=mismatched_children,
                 ),
             )
-
-    def _get_mismatched_relations(self) -> Tuple[set[models.Field], set[models.Field]]:
-        model_references: set[models.ForeignKey] = set()
-        model_referenced_by: set[models.Field] = set()
-
-        for field in self.model._meta.get_fields():
-            if field.many_to_one:
-                model_references.add(field)
-            if field.one_to_many:
-                model_referenced_by.add(field)
-
-        mismatched_references = self.parents - model_references
-        mismatched_referenced_by = self.children - model_referenced_by
-
-        return mismatched_references, mismatched_referenced_by
 
     def _handle_multiple_of_same_field_name(self) -> None:
         """Handle multiple of the same field name."""
-        if self._has_multiple_of_same_field_name():
+        if self.utils.has_multiple_of_same_field_name(self.index_fields):
             raise typesense_exceptions.RequestMalformed('Field names must be unique.')
 
-    def _has_multiple_of_same_field_name(self) -> bool:
-        field_name_counts = Counter(field.name for field in self.index_fields)
-        return any(count > 1 for count in field_name_counts.values())
+    def _handle_mismatched_skips(self) -> None:
+        """Handle mismatched skips."""
+        mismatched_skips = self.skip_index_fields - self.non_relation_model_fields
+
+        if mismatched_skips:
+            warnings.warn(
+                f'Some fields: {mismatched_skips} are not present in the model.',
+                UserWarning,
+                stacklevel=2,
+            )
 
     def _handle_mismatched_fields(self) -> None:
         """Handle mismatched fields."""
-        mismatched_fields = self._get_mismatched_fields()
+        mismatched_fields = self.index_fields - self.non_relation_model_fields
 
         if mismatched_fields:
             warnings.warn(
@@ -405,83 +448,120 @@ class TypesenseCollection:
                 stacklevel=2,
             )
 
-    def _get_mismatched_fields(self) -> set[models.Field]:
-        """Get the fields that are not present in the model."""
-        model_fields = {
-            field for field in self.model._meta.get_fields() if not field.is_relation
-        }
-        return self.index_fields - model_fields
+    def _handle_implicit_fields(self) -> FieldSet:
+        non_relation_fields: set[models.Field[Any, Any]] = set()
 
-    def _handle_implicit_fields(self) -> None:
+        parents: set[models.ForeignKey[models.Model, models.Model]] = set()
+        children: set[models.ManyToOneRel] = set()
+
         for field in self.model._meta.get_fields():
-            if not isinstance(field, (models.Field, ForeignObjectRel)):
-                continue
-            if self._validate_id_field(field):
-                continue
-
-            if not field.is_relation:
-                self.index_fields.add(field)
-
-            self._handle_relation_field(field)
-
-    def _validate_id_field(self, field: models.Field) -> bool:
-        return field.name == 'id' and not self.override_id
-
-    def _handle_relation_field(
-        self,
-        field: models.Field,
-    ) -> None:
-        if field.related_model is self.model:
-            raise typesense_exceptions.RequestMalformed('Model cant reference itself.')
-
-        if field.many_to_many:
-            raise typesense_exceptions.RequestMalformed(
-                'Implicit Many to many field {field} is not allowed.'.format(
-                    field=field,
-                ),
+            processed_field = self.utils.process_field(
+                field=field,
+                index_fields=self.index_fields,
+                skip_index_fields=self.skip_index_fields,
+                override_id=self.override_id,
+                model=self.model,
             )
-        if field.many_to_one:
-            self._handle_many_to_one(field)
-        elif field.one_to_many:
-            self._handle_one_to_many(field)
 
-    def _handle_many_to_one(
-        self,
-        field: models.Field,
-    ) -> None:
-        self.parents.add(field)
+            if processed_field.get('child'):
+                children.add(processed_field['child'])
 
-    def _handle_one_to_many(
-        self,
-        field: models.Field,
-    ) -> None:
-        self.children.add(field)
+            if processed_field.get('parent'):
+                parents.add(processed_field['parent'])
 
-    def _handle_typesense_fields(self) -> None:
+            if processed_field.get('non_relation_field'):
+                non_relation_fields.add(processed_field['non_relation_field'])
+
+        return {
+            'non_relation_fields': non_relation_fields,
+            'parents': parents,
+            'children': children,
+        }
+
+    def _handle_typesense_fields(self) -> list[APIField]:
         """Handle Typesense fields."""
-        self.typesense_fields = [
+        non_relations_skip_index_fields = self.utils.get_non_relation_fields_in_set(
+            self.skip_index_fields,
+        )
+
+        return [
             {
+                'type': TypesenseCollectionUtils.handle_typesense_field_type(
+                    self.mapped_field_types,
+                    field,
+                ),
                 'name': field.name,
-                'type': self._handle_typesense_field_type(field),
-                **({'facet': True} if field in self.facets else {}),
+                'facet': field in self.facets,
+                'index': self.utils.is_field_indexed(
+                    field=field,
+                    skip_index_fields=self.skip_index_fields,
+                    index_fields=self.index_fields,
+                ),
+                # 'optional': field.blank or field.null,
             }
-            for field in self.index_fields
+            for field in (self.index_fields | non_relations_skip_index_fields)
         ]
 
-    def _handle_typesense_geopoints(self) -> None:
+    def _handle_typesense_geopoints(self) -> list[APIField]:
         """Handle Typesense geopoints."""
-        self.typesense_geopoints = [
+        return [
             {
-                'name': '{long}_{lat}'.format(long=long, lat=lat),
+                'name': f'{long}_{lat}',
                 'type': 'geopoint',
+                'facet': lat in self.facets or long in self.facets,
+                'index': self.utils.is_field_indexed(
+                    lat,
+                    index_fields=self.index_fields,
+                    skip_index_fields=self.skip_index_fields,
+                )
+                or self.utils.is_field_indexed(
+                    long,
+                    index_fields=self.index_fields,
+                    skip_index_fields=self.skip_index_fields,
+                ),
             }
             for long, lat in self.geopoints
         ]
 
-    def _handle_typesense_field_type(self, field: models.Field) -> str:
-        """Handle Typesense field type."""
-        if field.name == 'id':
-            return 'string'
+    def _handle_typesense_relations(self) -> list[APIField]:
+        """Handle Typesense relations."""
+        typesense_relations: list[APIField] = []
+
+        if self.use_joins:
+            for field in self.parents:
+                typesense_relations.append(
+                    self.utils.join_on_field(
+                        field=field,
+                        facets=self.facets,
+                        model=self.model,
+                        skip_index_fields=self.skip_index_fields,
+                        valid_types=self.mapped_field_types,
+                    ),
+                )
+
+        for reference in self.detailed_parents:
+            typesense_relations.append(
+                {
+                    'name': reference.name,
+                    'type': 'object',
+                    'index': reference not in self.skip_index_fields,
+                    'facet': False,
+                },
+            )
+
+        for child in self.detailed_children:
+            typesense_relations.append(
+                {
+                    'name': child.name,
+                    'type': 'object[]',
+                    'index': child not in self.skip_index_fields,
+                    'facet': False,
+                },
+            )
+
+        return typesense_relations
+
+
 _TField = TypeVar('_TField', bound=models.Field[Any, Any])
 
 
