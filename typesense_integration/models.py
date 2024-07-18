@@ -295,6 +295,22 @@ class TypesenseCollection:
             required_fields['token_separators'] = ['+', '-', '@', '.']
 
         return required_fields
+
+    def create(self) -> Any:
+        """Create the collection with Typesense."""
+        schema = self.generate_schema()
+        try:
+            # Client has already been validated
+            return self.client.collections.create(schema)  # type: ignore[union-attr]
+        except typesense_exceptions.ObjectAlreadyExists:
+            warnings.warn(
+                'Collection {name} already exists.'.format(
+                    name=self.name,
+                ),
+                UserWarning,
+                stacklevel=2,
+            )
+
     def _validate_client_and_model(self) -> None:
         if not isinstance(self.client, Client):
             raise typesense_exceptions.ConfigError(
