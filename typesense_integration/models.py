@@ -114,12 +114,7 @@ class CollectionParams(TypedDict):
         set[models.ForeignKey[models.Model, models.Model]] | Literal[True]
     ]
     detailed_children: NotRequired[set[models.ManyToOneRel] | Literal[True]]
-    default_sorting_field: NotRequired[
-        models.IntegerField[Any, Any]
-        | models.FloatField[Any, Any]
-        | models.DecimalField[Any, Any]
-        | None
-    ]
+    default_sorting_field: NotRequired[SortableField | None]
     use_joins: NotRequired[bool]
     override_id: NotRequired[bool]
 
@@ -176,6 +171,12 @@ Geopoint = Union[
         models.FloatField[Any, Any] | models.DecimalField[Any, Any],
         models.FloatField[Any, Any] | models.DecimalField[Any, Any],
     ],
+]
+
+SortableField = Union[
+    models.IntegerField[Any, Any],
+    models.FloatField[Any, Any],
+    models.DecimalField[Any, Any],
 ]
 
 
@@ -281,18 +282,8 @@ class TypesenseCollection:
 
     def _handle_default_sorting_field(
         self,
-        field: (
-            models.IntegerField[Any, Any]
-            | models.FloatField[Any, Any]
-            | models.DecimalField[Any, Any]
-            | None
-        ),
-    ) -> (
-        models.IntegerField[Any, Any]
-        | models.FloatField[Any, Any]
-        | models.DecimalField[Any, Any]
-        | None
-    ):
+        field: SortableField | None,
+    ) -> SortableField | None:
         """Handle the default sorting field."""
         if field is None:
             return None
