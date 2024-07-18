@@ -177,6 +177,8 @@ SortableField = Union[
     models.IntegerField[Any, Any],
     models.FloatField[Any, Any],
     models.DecimalField[Any, Any],
+    models.DateField[Any, Any],
+    models.DateTimeField[Any, Any],
 ]
 
 
@@ -192,6 +194,8 @@ class TypesenseCollection:
         models.FloatField,
         models.DecimalField,
         models.IntegerField,
+        models.DateField,
+        models.DateTimeField,
     }
 
     # TODO: add image search
