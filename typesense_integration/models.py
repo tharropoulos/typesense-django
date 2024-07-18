@@ -270,6 +270,9 @@ class TypesenseCollection:
             self.parents,
         )
 
+        self.has_email = any(
+            field.__class__ == models.EmailField for field in self.index_fields
+        )
         self._handle_facets()
         self.typesense_fields = self._handle_typesense_fields()
         self.typesense_relations = self._handle_typesense_relations()
