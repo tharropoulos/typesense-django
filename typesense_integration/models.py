@@ -277,6 +277,24 @@ class TypesenseCollection:
         self.typesense_fields = self._handle_typesense_fields()
         self.typesense_relations = self._handle_typesense_relations()
         self.typesense_fields.extend(self._handle_typesense_geopoints())
+
+    def generate_schema(self) -> APICollection:
+        """Generate a valid Typesense schema."""
+        required_fields: APICollection = {
+            'name': self.name,
+            'fields': self.typesense_fields + self.typesense_relations,
+        }
+
+        if self.default_sorting_field:
+            required_fields['default_sorting_field'] = self.default_sorting_field.name
+
+        if self.detailed_children or self.detailed_parents:
+            required_fields['enable_nested_fields'] = True
+
+        if self.has_email:
+            required_fields['token_separators'] = ['+', '-', '@', '.']
+
+        return required_fields
     def _validate_client_and_model(self) -> None:
         if not isinstance(self.client, Client):
             raise typesense_exceptions.ConfigError(
