@@ -1,26 +1,70 @@
 from __future__ import annotations
 
 import warnings
-from collections import Counter
-from typing import Tuple
-
 from typing import (
     Any,
     ClassVar,
+    Iterable,
     NotRequired,
     Tuple,
     TypedDict,
+    TypeGuard,
+    TypeVar,
     Union,
     Unpack,
 )
 
+from django.contrib.contenttypes.fields import GenericForeignKey
 from django.db import models
-from django.db.models.fields.reverse_related import ForeignObjectRel
+from django.db.models.options import Options
 from typesense import Client
 from typesense import exceptions as typesense_exceptions
 from typing_extensions import Literal
 
 from typesense_integration.common.utils import ensure_is_subset_or_all, snake_case
+
+
+class Field(TypedDict):
+    """
+    :py:class:`Field` represents the field types for a Typesense collection.
+
+    :param parent: The parent field.
+    :param child: The child field.
+    :param non_relation_field: The non-relation field.
+
+    """
+
+    parent: NotRequired[models.ForeignKey[models.Model, models.Model]]
+    child: NotRequired[models.ManyToOneRel]
+    non_relation_field: NotRequired[models.Field[Any, Any]]
+
+
+class FieldSet(TypedDict):
+    """
+    :py:class:`FieldSet` represents the set of field types for a Typesense collection.
+
+    :param parents: The parent fields.
+    :param childs: The child fields.
+    :param non_relation_fields: The non-relation fields.
+
+    """
+
+    parents: NotRequired[set[models.ForeignKey[models.Model, models.Model]]]
+    children: NotRequired[set[models.ManyToOneRel]]
+    non_relation_fields: NotRequired[set[models.Field[Any, Any]]]
+
+
+class Relation(TypedDict):
+    """
+    :py:class: `Relations` represents the relations for a Typesense collection.
+
+    :param parent: The parent relation.
+    :param child: The child relation.
+
+    """
+
+    parent: NotRequired[models.ForeignKey[models.Model, models.Model]]
+    child: NotRequired[models.ManyToOneRel]
 
 
 class CollectionParams(TypedDict):
@@ -438,124 +482,475 @@ class TypesenseCollection:
         """Handle Typesense field type."""
         if field.name == 'id':
             return 'string'
+_TField = TypeVar('_TField', bound=models.Field[Any, Any])
 
-        typesense_type = self.mapped_field_types.get(field.__class__)
 
-        if typesense_type is None:
+class TypesenseCollectionUtils:
+    """Utility functions for Typesense collections."""
+
+    @staticmethod
+    def handle_composite_foreign_key(
+        field: models.ForeignKey[models.Model, models.Model],
+    ) -> None:
+        """Handle composite foreign keys."""
+        if TypesenseCollectionUtils.is_composite_foreign_key(field):
             raise typesense_exceptions.RequestMalformed(
-                'Field type for {field} is not supported. Supported types: \n {types}'.format(
-                    field=field,
-                    types=self.mapped_field_types.keys(),
-                ),
+                f'Composite key {field} is not allowed',
             )
 
-        if isinstance(field, models.DecimalField):
-            return self._handle_decimal_field(field)
+    @staticmethod
+    def raise_on_self_reference(
+        model: type[models.Model],
+        field: models.ForeignKey[models.Model, models.Model] | models.ForeignObjectRel,
+    ) -> None:
+        """
+        Raise an exception if a field is a self reference.
 
-        return typesense_type
+        :param model: The model to check.
+        :param field: The field to check.
 
-    def _handle_decimal_field(self, field: models.DecimalField) -> str:
-        """Handle DecimalField for different sizes."""
+        :raises Typesense.Exceptions.RequestMalformed: If the field is a self reference.
+        """
+        if TypesenseCollectionUtils.is_self_reference(model, field):
+            raise typesense_exceptions.RequestMalformed(
+                'Self reference is not allowed.',
+            )
+
+    @staticmethod
+    def is_self_reference(
+        model: type[models.Model],
+        field: models.ForeignKey[models.Model, models.Model] | models.ForeignObjectRel,
+    ) -> bool:
+        """
+        Check if a field is a self reference.
+
+        :param model: The model to check.
+        :param field: The field to check.
+
+        :return: True if the field is a self reference, False otherwise.
+
+        """
+        return field.related_model == model
+
+    @staticmethod
+    def get_related_model_meta(
+        field: models.ForeignKey[models.Model, models.Model],
+    ) -> Options[models.Model]:
+        """
+        Get the meta class of the related model.
+
+        :param field: The field to get the related model meta class from.
+
+        :return: The meta class of the related model.
+
+        :raises Typesense.Exceptions.RequestMalformed: If the related model has no meta class.
+
+        """
+        if (
+            isinstance(field.related_model, str)
+            or getattr(field.related_model, '_meta', None) is None
+        ):
+            raise typesense_exceptions.RequestMalformed(
+                'Invalid or missing meta class on related model',
+            )
+
+        return field.related_model._meta
+
+    @staticmethod
+    def is_composite_foreign_key(
+        field: models.ForeignKey[models.Model, models.Model],
+    ) -> bool:
+        """
+        Determine if a foreign key is composite.
+
+        :param field: The field to check.
+
+        :return: True if the foreign key is composite, False otherwise.
+
+        """
+        return len(field.related_fields) > 1
+
+    @staticmethod
+    def handle_decimal_field(
+        field: models.DecimalField[Any, Any],
+    ) -> str:
+        """
+        Determines the appropriate Typesense field type for a `DecimalField` based
+         on its size and precision.
+
+        `float32` can represent values up to `~3.4E+38`, but precision might be lost for
+        values larger than `1E+7`, while
+        `float64` can represent values up to `~1.7E+308`, with precision up to 15-17
+        decimal digits
+
+
+        :param field: The `DecimalField` to handle.
+
+
+        :return: The Typesense field type (`float32` or `float64`) for the `DecimalField`.
+        """
         max_float_value = 3.4e38
-        # Calculate the maximum value that can be represented by the field
         max_field_value = (10 ** (field.max_digits - field.decimal_places)) - (
             10**-field.decimal_places
         )
 
-        # Float32 can represent values up to ~3.4E+38,
-        # but precision might be lost for values > 1E+7
-        # Float64 can represent values up to ~1.7E+308,
-        # with precision up to 15-17 decimal digits
         if max_field_value < max_float_value and field.decimal_places <= 7:
             return 'float32'
 
         return 'float64'
 
-    def _handle_facets(self) -> None:
-        """Handle facets."""
-        facetable_fields = self.index_fields.union(self.parents)
+    @staticmethod
+    def join_on_field(
+        *,
+        model: type[models.Model],
+        skip_index_fields: set[models.Field[Any, Any] | models.ForeignObjectRel],
+        facets: set[
+            models.Field[Any, Any] | models.ForeignKey[models.Model, models.Model]
+        ],
+        field: models.ForeignKey[models.Model, models.Model],
+        valid_types: dict[type[models.Field[Any, Any]], str],
+    ) -> APIField:
+        """
+        Create a Typesense field for a foreign key.
 
-        if self.facets is True:
-            self.facets = facetable_fields
+        :param model: The model to create the field for.
+        :param skip_index_fields: The fields to skip indexing.
 
-        if not self.facets.issubset(facetable_fields):
+        :return: The Typesense field for the foreign key.
+
+        :raises Typesense.Exceptions.RequestMalformed: If the related model has no verbose name.
+        """
+        TypesenseCollectionUtils.handle_composite_foreign_key(field)
+        TypesenseCollectionUtils.raise_on_self_reference(model, field)
+
+        _, related_field = field.related_fields[0]
+
+        related_model_meta = TypesenseCollectionUtils.get_related_model_meta(field)
+
+        if not isinstance(related_model_meta.verbose_name, str):
             raise typesense_exceptions.RequestMalformed(
-                'Facets must be a subset of index fields.',
+                f'Model {related_model_meta} has no verbose name.',
             )
 
-        if self.facets.intersection(self.parents) and not self.use_joins:
-            warnings.warn(
-                'Facetting on relation only affects JOINs',
-                UserWarning,
-                stacklevel=2,
-            )
+        related_model_name = TypesenseCollectionUtils.get_model_verbose_name_from_meta(
+            related_model_meta,
+        )
 
-    def _handle_detailed_relations(self) -> None:
-        """Handle detailed relations."""
-        if self.detailed_parents is True:
-            self.detailed_parents = self.parents
-        if self.detailed_children is True:
-            self.detailed_children = self.children
+        related_model_name_snake_case = snake_case(related_model_name)
 
-        if not self.detailed_parents.issubset(self.parents):
+        return {
+            'name': f'{field.name}_{related_field.name}',
+            'type': TypesenseCollectionUtils.handle_typesense_field_type(
+                valid_types,
+                related_field,
+            ),
+            'reference': f'{related_model_name_snake_case}.{related_field.name}',
+            'index': field not in skip_index_fields,
+            'facet': field in facets,
+        }
+
+    @staticmethod
+    def get_model_verbose_name_from_meta(meta: Options[models.Model]) -> str:
+        """
+        Get the verbose name of a model.
+
+        :param model: The model to get the verbose name from.
+
+        :return: The verbose name of the model.
+
+        :raises Typesense.Exceptions.RequestMalformed: If the model has no verbose name.
+        """
+        if not isinstance(meta.verbose_name, str):
             raise typesense_exceptions.RequestMalformed(
-                'Detailed references must be a subset of references.',
+                f'Model {meta} has no verbose name.',
             )
 
-        if not self.detailed_children.issubset(self.children):
+        return meta.verbose_name
+
+    @staticmethod
+    def handle_typesense_field_type(
+        valid_types: dict[type[models.Field[Any, Any]], str],
+        field: models.Field[Any, Any],
+    ) -> str:
+        """
+        Handle Typesense field type.
+
+        :param field: The field to handle.
+        :param valid_types: The valid field types.
+
+        :return: The Typesense field type for the field.
+
+        :raises Typesense.Exceptions.RequestMalformed: If the field type is not supported.
+        """
+        if field.name == 'id':
+            return 'string'
+
+        typesense_type = valid_types.get(field.__class__)
+        if not typesense_type:
             raise typesense_exceptions.RequestMalformed(
-                'Detailed referenced by must be a subset of referenced by.',
+                'Field type for {field} is not supported. Supported types: \n {types}'.format(
+                    field=field,
+                    types=valid_types.keys(),
+                ),
             )
 
-    def _handle_typesense_relations(self) -> None:
-        """Handle Typesense relations."""
-        self.typesense_relations = []
+        if isinstance(field, models.DecimalField):
+            return TypesenseCollectionUtils.handle_decimal_field(field)
 
-        self._handle_detailed_relations()
+        return typesense_type
 
-        if self.use_joins:
-            for field in self.parents:
-                self._handle_composite_foreign_key(field)
+    @staticmethod
+    def should_skip_field(
+        field: models.Field[Any, Any] | models.ForeignObjectRel,
+        override_id: bool,
+    ) -> bool:
+        """
+        Checks if a field should be skipped.
 
-                _, related_field = field.related_fields[0]
-                self.typesense_relations.append(
-                    {
-                        'name': '{local_field_name}_{field_related_name}'.format(
-                            local_field_name=field.name,
-                            field_related_name=related_field.name,
-                        ),
-                        'type': self._handle_typesense_field_type(related_field),
-                        'reference': '{related_model_name}.{related_field_name}'.format(
-                            related_model_name=snake_case(
-                                field.related_model._meta.verbose_name,
-                            ),
-                            related_field_name=related_field.name,
-                        ),
-                        **({'facet': True} if field in self.facets else {}),
-                    },
-                )
+        If the field is the ID field and the caller does not want to override the default
+        ID field, the field should be skipped.
 
-        for reference in self.detailed_parents:
-            self.typesense_relations.append(
-                {
-                    'name': reference.name,
-                    'type': 'object',
-                },
-            )
-        for child in self.detailed_children:
-            self.typesense_relations.append(
-                {
-                    'name': child.name,
-                    'type': 'object[]',
-                },
-            )
+        :param field: The field to check.
+        :param override_id: Whether to override the default ID field.
 
-    def _handle_composite_foreign_key(self, field: models.Field) -> None:
-        """Handle composite foreign keys."""
-        if self._is_composite_foreign_key(field):
+        :return: True if the field should be skipped, False otherwise.
+
+        """
+        return field.name == 'id' and not override_id
+
+    @staticmethod
+    def get_relation_fields_in_set(
+        fields: set[models.Field[Any, Any] | models.ForeignObjectRel],
+    ) -> set[models.Field[Any, Any] | models.ForeignObjectRel]:
+        """
+        Get the relation fields in a set.
+
+        :param fields: The set of fields to check.
+
+        :return: The relation fields in the set.
+
+        """
+        return {field for field in fields if field.is_relation}
+
+    @staticmethod
+    def get_non_relation_fields_in_set(
+        fields: Iterable[
+            models.Field[Any, Any] | models.ForeignObjectRel | GenericForeignKey
+        ],
+    ) -> set[models.Field[Any, Any]]:
+        """
+        Get the non-relation fields in a set.
+
+        :param fields: The set of fields to check.
+
+        :return: The non-relation fields in the set.
+
+        """
+        return {
+            field
+            for field in fields
+            if TypesenseCollectionUtils.is_non_relation_field(field)
+        }
+
+    @staticmethod
+    def is_non_relation_field(
+        field: models.Field[Any, Any] | models.ForeignObjectRel | GenericForeignKey,
+    ) -> TypeGuard[models.Field[Any, Any]]:
+        """
+        Check if a field is a valid field for indexing.
+
+        :param field: The field to check.
+
+        :return: True if the field is a valid field for indexing, False otherwise.
+        """
+        return isinstance(field, models.Field) and not field.is_relation
+
+    @staticmethod
+    def is_field_indexed(
+        field: models.Field[Any, Any] | models.ForeignObjectRel,
+        skip_index_fields: set[models.Field[Any, Any] | models.ForeignObjectRel],
+        index_fields: set[models.Field[Any, Any]],
+    ) -> bool:
+        """
+        Check if a field is indexed.
+
+        Since the index fields are non-relations, and relations can be skipped, there
+        needs to be two checks: one for the field not being in the skip index fields, and
+        one for the field being in the index fields.
+
+        :param field: The field to check.
+
+        :return: True if the field is indexed, False otherwise.
+        """
+        return field not in skip_index_fields or field in index_fields
+
+    @staticmethod
+    def get_mismatched_relations(
+        model: type[models.Model],
+        parents: set[models.ForeignKey[models.Model, models.Model]],
+        children: set[models.ManyToOneRel],
+    ) -> Tuple[
+        set[models.ForeignKey[models.Model, models.Model]],
+        set[models.ManyToOneRel],
+    ]:
+        """
+        Get the mismatched relations for a model.
+
+        :param model: The model to check.
+        :param parents: The parent relations to check.
+        :param children: The child relations to check.
+
+        :return: A tuple containing the mismatched parent relations and the mismatched
+            child relations.
+        """
+        model_references: set[models.ForeignKey[models.Model, models.Model]] = set()
+        model_referenced_by: set[models.ManyToOneRel] = set()
+
+        for field in model._meta.get_fields():
+            if isinstance(field, models.ForeignKey) and field.many_to_one:
+                model_references.add(field)
+            if isinstance(field, models.ManyToOneRel) and field.one_to_many:
+                model_referenced_by.add(field)
+
+        mismatched_parents = parents - model_references
+        mismatched_children = children - model_referenced_by
+
+        return mismatched_parents, mismatched_children
+
+    @staticmethod
+    def has_multiple_of_same_field_name(field_set: set[models.Field[Any, Any]]) -> bool:
+        """
+        Check if a set has multiple fields with the same name.
+
+        :param field_set: The set to check.
+
+        :return: True if the set has multiple fields with the same name, False otherwise.
+        """
+        seen = set()
+
+        for field in field_set:
+            if field.name in seen:
+                return True
+            seen.add(field.name)
+
+        return False
+
+    @staticmethod
+    def is_tuple_element_in_set(
+        field_set: set[models.Field[Any, Any]],
+        tup_set: set[Tuple[_TField, _TField]],
+    ) -> bool:
+        """
+        Check if a set of tuples has any of its elements in a set.
+
+        :param field_set: The set to check against.
+        :param tup_set: The set of tuples to check.
+
+        :return: True if any of the elements in the set of tuples are in the set, False
+            otherwise.
+
+        """
+        return any(lat in field_set or long in field_set for lat, long in tup_set)
+
+    @staticmethod
+    def get_mismatched_fields_in_sets(
+        original_set: set[models.Field[Any, Any]],
+        other_set: set[models.Field[Any, Any]],
+    ) -> set[models.Field[Any, Any]]:
+        """
+        Get the mismatched fields in two sets.
+
+        :param original_set: The original set.
+        :param other_set: The other set.
+
+        :return: The mismatched fields in the two sets.
+
+        """
+        return original_set - other_set
+
+    @staticmethod
+    def process_field(
+        *,
+        field: models.Field[Any, Any] | models.ForeignObjectRel | GenericForeignKey,
+        index_fields: set[models.Field[Any, Any]],
+        skip_index_fields: set[models.Field[Any, Any] | models.ForeignObjectRel],
+        override_id: bool,
+        model: type[models.Model],
+    ) -> Field:
+        """
+        Process a field.
+
+        If the field is a generic foreign key, raise an exception. If the field is a
+        non-relation field and indexed, return a dictionary with the non-relation field.
+        If the field is a relation field, return a dictionary with the parent or child
+        field.
+
+        :param field: The field to process.
+        :param index_fields: The set of fields to be indexed.
+        :param skip_index_fields: The set of fields to not be indexed.
+        :param override_id: Whether to override the default ID field.
+        :param model: The model to check.
+
+        :return: A dictionary with the parent or child field, or an empty dictionary.
+
+        """
+        if isinstance(field, GenericForeignKey):
             raise typesense_exceptions.RequestMalformed(
-                'Composite key {field} is not allowed'.format(field=field),
+                'Generic foreign keys are not allowed.',
             )
 
-    def _is_composite_foreign_key(self, field: models.Field) -> bool:
-        return len(field.related_fields) > 1
+        if TypesenseCollectionUtils.should_skip_field(
+            field=field,
+            override_id=override_id,
+        ):
+            return {}
+
+        if TypesenseCollectionUtils.is_non_relation_field(
+            field,
+        ) and TypesenseCollectionUtils.is_field_indexed(
+            field=field,
+            index_fields=index_fields,
+            skip_index_fields=skip_index_fields,
+        ):
+            return {'non_relation_field': field}
+
+        return TypesenseCollectionUtils.process_relation_field(field, model)
+
+    @staticmethod
+    def process_relation_field(
+        field: models.Field[Any, Any] | models.ForeignObjectRel,
+        model: type[models.Model],
+    ) -> Field:
+        """
+        Process a relation field. If the field is a self reference, raise an exception.
+
+        If the field is a many to many field, raise an exception. If the field is a
+        many to one field, return a dictionary with the parent field. If the field is a
+        one to many field, return a dictionary with the child field.
+
+        :param field: The field to process.
+        :param model: The model to check.
+
+        :return: A dictionary with the parent or child field, or an empty dictionary.
+
+        :raises Typesense.Exceptions.RequestMalformed: If the field is a self reference or
+            many to many field.
+
+        """
+        if isinstance(field, (models.ForeignKey, models.ForeignObjectRel)):
+            TypesenseCollectionUtils.raise_on_self_reference(model=model, field=field)
+
+        if field.many_to_many:
+            raise typesense_exceptions.RequestMalformed(
+                'Implicit Many to many field {field} is not allowed.'.format(
+                    field=field,
+                ),
+            )
+
+        if isinstance(field, models.ForeignKey) and field.many_to_one:
+            return {'parent': field}
+
+        elif isinstance(field, models.ManyToOneRel) and field.one_to_many:
+            return {'child': field}
+
+        return {}
