@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
+import os
 from pathlib import Path
 
 import django_stubs_ext
@@ -22,6 +23,11 @@ django_stubs_ext.monkeypatch()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+TYPESENSE_PORT = os.environ.get('TYPESENSE_PORT', 8108)
+TYPESENSE_HOST = os.environ.get('TYPESENSE_HOST', 'localhost')
+TYPESENSE_API_KEY = os.environ.get('TYPESENSE_API_KEY', 'xyz')
+TYPESENSE_PROTOCOL = os.environ.get('TYPESENSE_PROTOCOL', 'http')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
