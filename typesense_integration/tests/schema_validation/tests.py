@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from unittest import mock
-from uuid import UUID
 
 from django.test import TestCase
 from typesense import Client
@@ -19,7 +18,7 @@ from typesense_integration.tests.schema_validation.models import (
 class TypesenseCollectionTests(TestCase):
     """Tests for the TypesenseCollection class."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up the test environment."""
         self.mock_client_constructor = mock.patch(
             'typesense.Client',
@@ -32,7 +31,7 @@ class TypesenseCollectionTests(TestCase):
         """Helper method to initialize the collection with a fresh mock client."""
         return mock.create_autospec(Client)
 
-    def test_auto_field(self):
+    def test_auto_field(self) -> None:
         """Test AutoField validation."""
         mock_client_instance = self.mock_client()
 
@@ -54,7 +53,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_big_integer_field(self):
+    def test_big_integer_field(self) -> None:
         """Test BigIntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -74,7 +73,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_binary_field(self):
+    def test_binary_field(self) -> None:
         """Test BinaryField validation."""
         mock_client_instance = self.mock_client()
         with self.assertRaises(typesense_exceptions.RequestMalformed):
@@ -86,7 +85,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_boolean_field(self):
+    def test_boolean_field(self) -> None:
         """Test BooleanField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -106,7 +105,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_char_field(self):
+    def test_char_field(self) -> None:
         """Test CharField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -126,7 +125,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_date_field(self):
+    def test_date_field(self) -> None:
         """Test DateField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -146,7 +145,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_date_time_field(self):
+    def test_date_time_field(self) -> None:
         """Test DateTimeField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -166,7 +165,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_decimal_field(self):
+    def test_decimal_field(self) -> None:
         """Test DecimalField validation that's mapped to float32."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -186,7 +185,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_decimal_field_large_decimal_points(self):
+    def test_decimal_field_large_decimal_points(self) -> None:
         """Test DecimalField validation that's mapped to float64 because of decimal points."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -206,7 +205,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_decimal_field_large_digits(self):
+    def test_decimal_field_large_digits(self) -> None:
         """Test DecimalField validation that's mapped to float64 because of total digits."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -226,7 +225,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_duration_field(self):
+    def test_duration_field(self) -> None:
         """Test DurationField validation."""
         mock_client_instance = self.mock_client()
         with self.assertRaises(typesense_exceptions.RequestMalformed):
@@ -238,7 +237,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_email_field(self):
+    def test_email_field(self) -> None:
         """Test EmailField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -258,7 +257,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_file_field(self):
+    def test_file_field(self) -> None:
         """Test FileField validation."""
         mock_client_instance = self.mock_client()
         with self.assertRaises(typesense_exceptions.RequestMalformed):
@@ -270,7 +269,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_file_path_field(self):
+    def test_file_path_field(self) -> None:
         """Test FilePathField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -290,7 +289,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_float_field(self):
+    def test_float_field(self) -> None:
         """Test FloatField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -310,7 +309,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_generic_ip_address_field(self):
+    def test_generic_ip_address_field(self) -> None:
         """Test GenericIpAddressField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -330,7 +329,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_image_field(self):
+    def test_image_field(self) -> None:
         """Test ImageField validation."""
         mock_client_instance = self.mock_client()
         with self.assertRaises(typesense_exceptions.RequestMalformed):
@@ -342,7 +341,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_integer_field(self):
+    def test_integer_field(self) -> None:
         """Test IntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -362,7 +361,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_json_field(self):
+    def test_json_field(self) -> None:
         """Test JsonField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -382,7 +381,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_positive_big_integer_field(self):
+    def test_positive_big_integer_field(self) -> None:
         """Test PositiveBigIntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -402,7 +401,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_positive_integer_field(self):
+    def test_positive_integer_field(self) -> None:
         """Test PositiveIntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -422,7 +421,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_positive_small_integer_field(self):
+    def test_positive_small_integer_field(self) -> None:
         """Test PositiveSmallIntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -442,7 +441,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_slug_field(self):
+    def test_slug_field(self) -> None:
         """Test SlugField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -462,7 +461,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_small_integer_field(self):
+    def test_small_integer_field(self) -> None:
         """Test SmallIntegerField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -482,7 +481,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_text_field(self):
+    def test_text_field(self) -> None:
         """Test TextField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -502,7 +501,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_time_field(self):
+    def test_time_field(self) -> None:
         """Test TimeField validation."""
         mock_client_instance = self.mock_client()
         with self.assertRaises(typesense_exceptions.RequestMalformed):
@@ -514,7 +513,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_url_field(self):
+    def test_url_field(self) -> None:
         """Test UrlField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -534,7 +533,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_big_auto_field(self):
+    def test_big_auto_field(self) -> None:
         """Test BigAutoField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -554,7 +553,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_small_auto_field(self):
+    def test_small_auto_field(self) -> None:
         """Test SmallAutoField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(
@@ -574,7 +573,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_uuid_field(self):
+    def test_uuid_field(self) -> None:
         """Test UUIDField validation."""
         mock_client_instance = self.mock_client()
         collection = TypesenseCollection(

@@ -27,7 +27,7 @@ from typesense_integration.tests.collections.models import (
 class TypesenseCollectionTests(TestCase):
     """Tests for the TypesenseCollection class."""
 
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up the test environment."""
         self.mock_client_constructor = mock.patch(
             'typesense.Client',
@@ -40,27 +40,27 @@ class TypesenseCollectionTests(TestCase):
         """Helper method to initialize the collection with a fresh mock client."""
         return mock.create_autospec(Client)
 
-    def test_missing_args(self):
+    def test_missing_args(self) -> None:
         """Test that it raises an exception when missing required args."""
         mock_client_instance = self.mock_client()
 
-        with self.assertRaises(TypeError):
-            TypesenseCollection(client=mock_client_instance)
+        with self.assertRaises(KeyError):
+            TypesenseCollection(client=mock_client_instance)  # type: ignore[call-arg]
 
-        with self.assertRaises(TypeError):
-            TypesenseCollection(model=Author)
+        with self.assertRaises(typesense_exceptions.ConfigError):
+            TypesenseCollection(model=Author)  # type: ignore[call-arg]
 
-    def test_malformed_args(self):
+    def test_malformed_args(self) -> None:
         """Test that it raises an exception when args are malformed."""
         mock_client_instance = self.mock_client()
 
         with self.assertRaises(typesense_exceptions.ConfigError):
-            TypesenseCollection(client=mock_client_instance, model=Wrong)
+            TypesenseCollection(client=mock_client_instance, model=Wrong)  # type: ignore[arg-type]
 
         with self.assertRaises(typesense_exceptions.ConfigError):
             TypesenseCollection(client=Wrong, model=Author)
 
-    def test_verbose_model_name(self):
+    def test_verbose_model_name(self) -> None:
         """Test that it can handle verbose model names."""
         mock_client_instance = self.mock_client()
 
@@ -71,7 +71,7 @@ class TypesenseCollectionTests(TestCase):
 
         self.assertEqual(collection.name, 'custom_name')
 
-    def test_verbose_relations(self):
+    def test_verbose_relations(self) -> None:
         """Test that it can handle verbose relations."""
         mock_client_instance = self.mock_client()
 
@@ -99,7 +99,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_one_to_many_relation(self):
+    def test_one_to_many_relation(self) -> None:
         """Test one-to-many relation. The author has many books."""
         mock_client_instance = self.mock_client()
 
@@ -109,7 +109,7 @@ class TypesenseCollectionTests(TestCase):
         self.assertEqual(collection.children, {Author._meta.get_field('book')})
         self.assertEqual(collection.parents, set())
 
-    def test_no_relations(self):
+    def test_no_relations(self) -> None:
         """Test no relations."""
         mock_client_instance = self.mock_client()
 
@@ -126,7 +126,7 @@ class TypesenseCollectionTests(TestCase):
         self.assertEqual(collection.children, set())
         self.assertEqual(collection.parents, set())
 
-    def test_implicit_many_to_many(self):
+    def test_implicit_many_to_many(self) -> None:
         """Test implicit many-to-many relation. If there's no link model it should raise."""
         mock_client_instance = self.mock_client()
 
@@ -136,7 +136,7 @@ class TypesenseCollectionTests(TestCase):
                 model=ManyToManyLeftImplicit,
             )
 
-    def test_explicit_many_to_many(self):
+    def test_explicit_many_to_many(self) -> None:
         """Test explicit many-to-many relation. An intermediary collection should be used."""
         mock_client_instance = self.mock_client()
 
@@ -158,7 +158,7 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-    def test_many_to_one(self):
+    def test_many_to_one(self) -> None:
         """Test many-to-one relation. The chapter has one book."""
         mock_client_instance = self.mock_client()
 
@@ -169,7 +169,7 @@ class TypesenseCollectionTests(TestCase):
         self.assertEqual(collection.name, 'chapter')
         self.assertEqual(collection.parents, {Chapter._meta.get_field('book')})
 
-    def test_both_relations(self):
+    def test_both_relations(self) -> None:
         """Test both relations. Book has many chapter and only one author."""
         mock_client_instance = self.mock_client()
 
@@ -186,7 +186,8 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-    def test_override_id_field(self):
+
+    def test_override_id_field(self) -> None:
         """Test that it can override the default id field."""
         mock_client_instance = self.mock_client()
 
@@ -212,7 +213,7 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-    def test_explicit_index_fields(self):
+    def test_explicit_index_fields(self) -> None:
         """Test explicit index fields."""
         mock_client_instance = self.mock_client()
 
@@ -235,7 +236,7 @@ class TypesenseCollectionTests(TestCase):
         )
         self.assertEqual(collection.parents, set())
 
-    def test_explicit_parents(self):
+    def test_explicit_parents(self) -> None:
         """Test explicit parents."""
         mock_client_instance = self.mock_client()
 
@@ -261,7 +262,7 @@ class TypesenseCollectionTests(TestCase):
             set(),
         )
 
-    def test_explicit_children(self):
+    def test_explicit_children(self) -> None:
         """Test explicit children."""
         mock_client_instance = self.mock_client()
 
@@ -283,7 +284,7 @@ class TypesenseCollectionTests(TestCase):
             },
         )
 
-    def test_joins(self):
+    def test_joins(self) -> None:
         """Test that it can handle multiple joins."""
         mock_client_instance = self.mock_client()
 
@@ -328,7 +329,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_joins_other_than_id(self):
+    def test_joins_other_than_id(self) -> None:
         """Test that it can handle joins on fields other than id."""
         mock_client_instance = self.mock_client()
 
@@ -361,7 +362,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_joins_composite_key(self):
+    def test_joins_composite_key(self) -> None:
         """Test that it can handle composite keys in joins."""
         mock_client_instance = self.mock_client()
 
@@ -369,11 +370,11 @@ class TypesenseCollectionTests(TestCase):
             TypesenseCollection(
                 client=mock_client_instance,
                 model=CompositeForeignKey,
-                parents={CompositeForeignKey._meta.get_field('reference')},
+                parents={CompositeForeignKey._meta.get_field('reference')},  # type: ignore[arg-type]
                 use_joins=True,
             )
 
-    def test_warn_foreign_field(self):
+    def test_warn_foreign_field(self) -> None:
         """Test that it warns if a foreign field is included in index_fields."""
         mock_client_instance = self.mock_client()
 
@@ -400,7 +401,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_reference_in_index_fields(self):
+    def test_reference_in_index_fields(self) -> None:
         """Test that it raises if a reference is included in index_fields."""
         mock_client_instance = self.mock_client()
 
@@ -413,7 +414,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_wrong_reference(self):
+    def test_wrong_reference(self) -> None:
         """Test that it raises if a reference is not in the model's foreign key fields."""
         mock_client_instance = self.mock_client()
 
@@ -424,10 +425,10 @@ class TypesenseCollectionTests(TestCase):
                 index_fields={
                     Book._meta.get_field('author'),
                 },
-                parents={Author._meta.get_field('name')},
+                parents={Author._meta.get_field('name')},  # type: ignore[arg-type]
             )
 
-    def test_wrong_referenced_by(self):
+    def test_wrong_referenced_by(self) -> None:
         """Test that it raises if a referenced_by is not in another model's foreign keys."""
         mock_client_instance = self.mock_client()
 
@@ -438,10 +439,10 @@ class TypesenseCollectionTests(TestCase):
                 index_fields={
                     Book._meta.get_field('author'),
                 },
-                children={Author._meta.get_field('name')},
+                children={Author._meta.get_field('name')},  # type: ignore[arg-type]
             )
 
-    def test_ignore_duplicate_names(self):
+    def test_ignore_duplicate_names(self) -> None:
         """Test that it ignores if there are duplicate field names of the same model."""
         mock_client_instance = self.mock_client()
 
@@ -461,7 +462,7 @@ class TypesenseCollectionTests(TestCase):
         )
         self.assertEqual(collection.parents, set())
 
-    def test_raise_duplicate_names(self):
+    def test_raise_duplicate_names(self) -> None:
         """Test that it raises if there are duplicate field names of different models."""
         mock_client_instance = self.mock_client()
 
@@ -475,7 +476,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_invalid_model_attribute_type(self):
+    def test_invalid_model_attribute_type(self) -> None:
         """Test that it raises if a model attribute is not a field."""
         mock_client_instance = self.mock_client()
 
@@ -485,7 +486,7 @@ class TypesenseCollectionTests(TestCase):
                 model=InvalidField,
             )
 
-    def test_valid_attribute_in_model_with_invalid(self):
+    def test_valid_attribute_in_model_with_invalid(self) -> None:
         """Test that it doesn't raise if the attributes passed are valid."""
         mock_client_instance = self.mock_client()
 
@@ -503,7 +504,7 @@ class TypesenseCollectionTests(TestCase):
             {InvalidField._meta.get_field('valid_type')},
         )
 
-    def test_all_detail_relations(self):
+    def test_all_detail_relations(self) -> None:
         """Test that it can handle all relations with detailed relations."""
         mock_client_instance = self.mock_client()
 
@@ -548,7 +549,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_detailed_relations_with_joins(self):
+    def test_detailed_relations_with_joins(self) -> None:
         """Test that it can handle all relations with detailed references and joins."""
         mock_client_instance = self.mock_client()
 
@@ -589,7 +590,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_some_detail_relations(self):
+    def test_some_detail_relations(self) -> None:
         """Test that it can handle some relations with detailed references."""
         mock_client_instance = self.mock_client()
 
@@ -631,7 +632,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_raises_detail_relation_not_a_subset(self):
+    def test_raises_detail_relation_not_a_subset(self) -> None:
         """Test that it raises if detailed relation is not a subset of relations."""
         mock_client_instance = self.mock_client()
 
@@ -640,7 +641,7 @@ class TypesenseCollectionTests(TestCase):
                 client=mock_client_instance,
                 model=Book,
                 detailed_parents={
-                    Book._meta.get_field('chapter'),
+                    Book._meta.get_field('chapter'),  # type: ignore[arg-type]
                 },
             )
 
@@ -649,11 +650,11 @@ class TypesenseCollectionTests(TestCase):
                 client=mock_client_instance,
                 model=Book,
                 detailed_children={
-                    Book._meta.get_field('author'),
+                    Book._meta.get_field('author'),  # type: ignore[arg-type]
                 },
             )
 
-    def test_all_facets(self):
+    def test_all_facets(self) -> None:
         """Test that it can handle all facets."""
         mock_client_instance = self.mock_client()
 
@@ -695,7 +696,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_some_facets(self):
+    def test_some_facets(self) -> None:
         """Test that it can handle some facets."""
         mock_client_instance = self.mock_client()
 
@@ -736,7 +737,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_facets_with_joins(self):
+    def test_facets_with_joins(self) -> None:
         """Test that it can handle all facets with joins."""
         mock_client_instance = self.mock_client()
 
@@ -787,7 +788,7 @@ class TypesenseCollectionTests(TestCase):
             ],
         )
 
-    def test_warns_facets_on_relation_with_no_joins(self):
+    def test_warns_facets_on_relation_with_no_joins(self) -> None:
         """Test that it warns if a facet field is a relation but there's no join."""
         mock_client_instance = self.mock_client()
 
@@ -818,7 +819,7 @@ class TypesenseCollectionTests(TestCase):
             )
             self.assertEqual(collection.typesense_relations, [])
 
-    def test_raises_facets_not_a_subset(self):
+    def test_raises_facets_not_a_subset(self) -> None:
         """Test that it raises if a facet is not a subset of `index_fields` or relations."""
         mock_client_instance = self.mock_client()
 
@@ -834,7 +835,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_geopoint_in_index_fields(self):
+    def test_geopoint_in_index_fields(self) -> None:
         """Test that it raises if a geopoint is included in index_fields."""
         mock_client_instance = self.mock_client()
 
@@ -850,7 +851,7 @@ class TypesenseCollectionTests(TestCase):
                 },
             )
 
-    def test_geopoints(self):
+    def test_geopoints(self) -> None:
         """Test that it can handle geopoints."""
         mock_client_instance = self.mock_client()
 
@@ -877,7 +878,7 @@ class TypesenseCollectionTests(TestCase):
             {(GeoPoint._meta.get_field('lat'), GeoPoint._meta.get_field('long'))},
         )
 
-    def test_geopoints_not_float(self):
+    def test_geopoints_not_float(self) -> None:
         """Test that it raises if a geopoint is not a float."""
         mock_client_instance = self.mock_client()
 
@@ -886,11 +887,11 @@ class TypesenseCollectionTests(TestCase):
                 client=mock_client_instance,
                 model=GeoPoint,
                 geopoints={
-                    (GeoPoint._meta.get_field('lat'), GeoPoint._meta.get_field('name')),
+                    (GeoPoint._meta.get_field('lat'), GeoPoint._meta.get_field('name')),  # type: ignore[arg-type]
                 },
             )
 
-    def test_geopoints_not_tuple(self):
+    def test_geopoints_not_tuple(self) -> None:
         """Test that it raises if a geopoint is not a tuple."""
         mock_client_instance = self.mock_client()
 
@@ -899,6 +900,6 @@ class TypesenseCollectionTests(TestCase):
                 client=mock_client_instance,
                 model=GeoPoint,
                 geopoints={
-                    GeoPoint._meta.get_field('lat'),
+                    GeoPoint._meta.get_field('lat'),  # type: ignore[arg-type]
                 },
             )
