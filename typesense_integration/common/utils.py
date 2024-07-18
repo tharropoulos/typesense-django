@@ -33,7 +33,8 @@ def ensure_is_subset_or_all(
 
     :return: The input set if it is a subset of the final set.
 
-    :raises typesense_exceptions.RequestMalformed: If the input set is not a subset of the final set.
+    :raises typesense_exceptions.RequestMalformed: If the input set is not a subset
+     of the final set.
 
     """
     if input_set is True:
