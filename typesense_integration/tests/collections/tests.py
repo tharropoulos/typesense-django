@@ -95,6 +95,8 @@ class TypesenseCollectionTests(TestCase):
                     'name': 'custom_name_id',
                     'reference': 'custom_name.id',
                     'type': 'string',
+                    'facet': False,
+                    'index': True,
                 },
             ],
         )
@@ -325,6 +327,8 @@ class TypesenseCollectionTests(TestCase):
                     'name': 'author_id',
                     'reference': 'author.id',
                     'type': 'string',
+                    'facet': False,
+                    'index': True,
                 },
             ],
         )
@@ -355,6 +359,8 @@ class TypesenseCollectionTests(TestCase):
             collection.typesense_relations,
             [
                 {
+                    'facet': False,
+                    'index': True,
                     'name': 'reference_number',
                     'reference': 'reference.number',
                     'type': 'int32',
@@ -541,10 +547,14 @@ class TypesenseCollectionTests(TestCase):
                 {
                     'name': 'author',
                     'type': 'object',
+                    'index': True,
+                    'facet': False,
                 },
                 {
                     'name': 'chapter',
                     'type': 'object[]',
+                    'index': True,
+                    'facet': False,
                 },
             ],
         )
@@ -584,9 +594,20 @@ class TypesenseCollectionTests(TestCase):
         self.assertEqual(
             collection.typesense_relations,
             [
-                {'name': 'author_id', 'type': 'string', 'reference': 'author.id'},
-                {'name': 'author', 'type': 'object'},
-                {'name': 'chapter', 'type': 'object[]'},
+                {
+                    'name': 'author_id',
+                    'type': 'string',
+                    'reference': 'author.id',
+                    'index': True,
+                    'facet': False,
+                },
+                {'name': 'author', 'type': 'object', 'index': True, 'facet': False},
+                {
+                    'name': 'chapter',
+                    'type': 'object[]',
+                    'index': True,
+                    'facet': False,
+                },
             ],
         )
 
@@ -628,6 +649,8 @@ class TypesenseCollectionTests(TestCase):
                 {
                     'name': 'author',
                     'type': 'object',
+                    'index': True,
+                    'facet': False,
                 },
             ],
         )
@@ -687,11 +710,13 @@ class TypesenseCollectionTests(TestCase):
                     'name': 'title',
                     'type': 'string',
                     'facet': True,
+                    'index': True,
                 },
                 {
                     'name': 'published_date',
                     'type': 'int64',
                     'facet': True,
+                    'index': True,
                 },
             ],
         )
@@ -729,10 +754,13 @@ class TypesenseCollectionTests(TestCase):
                     'name': 'title',
                     'type': 'string',
                     'facet': True,
+                    'index': True,
                 },
                 {
                     'name': 'published_date',
                     'type': 'int64',
+                    'facet': False,
+                    'index': True,
                 },
             ],
         )
@@ -784,6 +812,7 @@ class TypesenseCollectionTests(TestCase):
                     'type': 'string',
                     'reference': 'author.id',
                     'facet': True,
+                    'index': True,
                 },
             ],
         )
