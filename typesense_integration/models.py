@@ -666,8 +666,7 @@ class TypesenseCollectionUtils:
         field: models.DecimalField[Any, Any],
     ) -> str:
         """
-        Determines the appropriate Typesense field type for a `DecimalField` based
-         on its size and precision.
+        Determines the Typesense field type for a `DecimalField` based on size & precision.
 
         `float32` can represent values up to `~3.4E+38`, but precision might be lost for
         values larger than `1E+7`, while
