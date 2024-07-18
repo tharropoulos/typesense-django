@@ -247,6 +247,9 @@ class TypesenseCollection:
 
         self._handle_fields()
 
+        self.default_sorting_field = self._handle_default_sorting_field(
+            kwargs.get('default_sorting_field', None),
+        )
         self.facetable_fields = self.index_fields.union(self.parents)
         self.facets = ensure_is_subset_or_all(
             kwargs.get('facets', set()),
@@ -276,6 +279,23 @@ class TypesenseCollection:
                 'Model must be an instance of the default models.Model class.',
             )
 
+    def _handle_default_sorting_field(
+        self,
+        field: (
+            models.IntegerField[Any, Any]
+            | models.FloatField[Any, Any]
+            | models.DecimalField[Any, Any]
+            | None
+        ),
+    ) -> (
+        models.IntegerField[Any, Any]
+        | models.FloatField[Any, Any]
+        | models.DecimalField[Any, Any]
+        | None
+    ):
+        """Handle the default sorting field."""
+        if field is None:
+            return None
 
         if field.name == 'id':
             raise typesense_exceptions.RequestMalformed(
