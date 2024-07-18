@@ -287,16 +287,21 @@ class TypesenseCollection:
 
             if not lat_type:
                 raise typesense_exceptions.RequestMalformed(
-                    'Geopoint {geopoint} is not supported. Supported types: \n {types}'.format(
-                        geopoint=lat_type,
-                        types=self.mapped_geopoint_types,
+                    '\n'.join(
+                        [
+                            f'Geopoint {lat_type} is not supported. Supported types:',
+                            f'{self.mapped_geopoint_types}',
+                        ],
                     ),
                 )
+
             if not long_type:
                 raise typesense_exceptions.RequestMalformed(
-                    'Geopoint {geopoint} is not supported. Supported types: \n {types}'.format(
-                        geopoint=long_type,
-                        types=self.mapped_geopoint_types,
+                    '\n'.join(
+                        [
+                            f'Geopoint {long_type} is not supported. Supported types:',
+                            f'{self.mapped_geopoint_types}',
+                        ],
                     ),
                 )
 
@@ -351,9 +356,7 @@ class TypesenseCollection:
 
         if mismatched_fields:
             warnings.warn(
-                'Some fields: {fields} are not present in the model.'.format(
-                    fields=mismatched_fields,
-                ),
+                f'Some fields: {mismatched_fields} are not present in the model.',
                 UserWarning,
                 stacklevel=2,
             )
