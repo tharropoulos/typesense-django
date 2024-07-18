@@ -4,25 +4,153 @@ import warnings
 from collections import Counter
 from typing import Tuple
 
+from typing import (
+    Any,
+    ClassVar,
+    NotRequired,
+    Tuple,
+    TypedDict,
+    Union,
+    Unpack,
+)
+
 from django.db import models
 from django.db.models.fields.reverse_related import ForeignObjectRel
 from typesense import Client
 from typesense import exceptions as typesense_exceptions
 from typing_extensions import Literal
 
-from typesense_integration.common.utils import snake_case
+from typesense_integration.common.utils import ensure_is_subset_or_all, snake_case
+
+
+class CollectionParams(TypedDict):
+    """
+    :py:class:`CollectionParams` represents the parameters for creating a Typesense collection.
+
+    :param client: An instance of Client to interact with the Typesense API.
+    :param model: The Django model that this instance is associated with.
+    :param index_fields: A set of model fields to be indexed. Defaults to None,
+        meaning all fields are indexed.
+    :param skip_index_fields: A set of model fields to not be indexed and instead saved
+        on disk. Defaults to None, meaning all fields are indexed.
+    :param parents: A set of model fields representing parent relations. Defaults to None.
+    :param default_sorting_field: The default sorting field for the collection.
+        Defaults to None.
+    :param geopoints: A set of model fields representing geopoints. Should not be included
+        in `index_fields`. Defaults to None.
+    :param children: A set of model fields representing child relations. Defaults to None.
+    :param facets: A set of model fields to be used as facets, or True to include all.
+        Defaults to None.
+    :param detailed_parents: A set of model fields for which detailed parent information
+        is required, mapping them to `object`, or True to include all. Defaults to None.
+    :param detailed_children: A set of model fields for which detailed child information
+        is required, mapping them to `object[]`, or True to include all. Defaults to None.
+    :param use_joins: A boolean indicating whether to use joins for relations.
+        Defaults to False.
+    :param override_id: A boolean indicating whether to override the default Typesense ID
+        field. Defaults to False. Not needed if the model's `id` field is passed as an
+        index field.
+
+    """
+
+    client: Client
+    model: type[models.Model]
+    index_fields: NotRequired[set[models.Field[Any, Any]]]
+    skip_index_fields: NotRequired[
+        set[models.Field[Any, Any] | models.ForeignObjectRel]
+    ]
+    parents: NotRequired[set[models.ForeignKey[models.Model, models.Model]]]
+    geopoints: NotRequired[set[Geopoint]]
+    children: NotRequired[set[models.ManyToOneRel]]
+    facets: NotRequired[
+        set[models.Field[Any, Any] | models.ForeignKey[models.Model, models.Model]]
+        | Literal[True]
+    ]
+    detailed_parents: NotRequired[
+        set[models.ForeignKey[models.Model, models.Model]] | Literal[True]
+    ]
+    detailed_children: NotRequired[set[models.ManyToOneRel] | Literal[True]]
+    default_sorting_field: NotRequired[
+        models.IntegerField[Any, Any]
+        | models.FloatField[Any, Any]
+        | models.DecimalField[Any, Any]
+        | None
+    ]
+    use_joins: NotRequired[bool]
+    override_id: NotRequired[bool]
+
+
+class APIField(TypedDict):
+    """
+    Typesense API field schema.
+
+    Part of the `fields` key in the Typesense schema.
+    https://typesense.org/docs/26.0/api/collections.html#schema-parameters
+
+    :param name: The name of the field.
+    :param type: The type of the field.
+    :param facet: Whether the field is a facet.
+      https://typesense.org/docs/26.0/api/search.html#facet-results
+    :param index: Whether the field is indexed.
+    :param reference: The reference field for a relation.
+      https://typesense.org/docs/26.0/api/joins.html#joins
+
+    """
+
+    name: str
+    type: str
+    facet: NotRequired[bool]
+    index: NotRequired[bool]
+    reference: NotRequired[str]
+    optional: NotRequired[bool]
+
+
+class APICollection(TypedDict):
+    """
+
+    Typesense API collection schema.
+
+    https://typesense.org/docs/26.0/api/collections.html#schema-parameters
+
+    :param name: The name of the collection.
+    :param fields: A list of fields in the collection.
+    :param default_sorting_field: The default sorting field.
+    :param enable_nested_fields: Whether nested fields are enabled.
+    :param token_separators: Token separators for the collection.
+
+    """
+
+    name: str
+    fields: list[APIField]
+    default_sorting_field: NotRequired[str]
+    enable_nested_fields: NotRequired[bool]
+    token_separators: NotRequired[list[str]]
+
+
+Geopoint = Union[
+    Tuple[
+        models.FloatField[Any, Any] | models.DecimalField[Any, Any],
+        models.FloatField[Any, Any] | models.DecimalField[Any, Any],
+    ],
+]
 
 
 class TypesenseCollection:
     """Class for mapping a Django model to a Typesense collection."""
 
-    mapped_geopoint_types = {
+    mapped_geopoint_types: ClassVar[set[type[models.Field[Any, Any]]]] = {
         models.FloatField,
         models.DecimalField,
     }
 
+    mapped_sortable_types: ClassVar[set[type[models.Field[Any, Any]]]] = {
+        models.FloatField,
+        models.DecimalField,
+        models.IntegerField,
+    }
+
     # TODO: add image search
-    mapped_field_types = {
+    mapped_field_types: ClassVar[dict[type[models.Field[Any, Any]], str]] = {
         models.AutoField: 'int32',
         models.CharField: 'string',
         models.URLField: 'string',
@@ -41,7 +169,6 @@ class TypesenseCollection:
         models.FloatField: 'float32',
         models.GenericIPAddressField: 'string',
         models.JSONField: 'string',
-        models.AutoField: 'int32',
         models.SmallAutoField: 'int32',
         models.BigAutoField: 'int64',
         models.UUIDField: 'string',
@@ -50,60 +177,40 @@ class TypesenseCollection:
         models.SmallIntegerField: 'int32',
     }
 
-    def __init__(
-        self,
-        *,
-        client: Client,
-        model: models.Model,
-        index_fields: set[models.Field] = None,
-        parents: set[models.Field] = None,
-        geopoints: set[Tuple[models.Field, models.Field]] = None,
-        children: set[models.Field] = None,
-        facets: set[models.Field] | Literal[True] = None,
-        detailed_parents: set[models.Field] | Literal[True] = None,
-        detailed_children: set[models.Field] | Literal[True] = None,
-        use_joins: bool = False,
-        override_id: bool = False,
-    ) -> None:
-        """
-        Initializes a new instance of TypesenseCollection.
-
-        :param client: An instance of Client to interact with the Typesense API.
-        :param model: The Django model that this instance is associated with.
-        :param index_fields: A set of model fields to be indexed. Defaults to None,
-          meaning all fields are indexed.
-        :param parents: A set of model fields representing parent relations. Defaults to None.
-        :param geopoints: A set of model fields representing geopoints. Should not be included in
-         `index_fields`. Defaults to None.
-        :param children: A set of model fields representing child relations. Defaults to None.
-        :param facets: A set of model fields to be used as facets, or True to include all.
-            Defaults to None.
-        :param detailed_parents: A set of model fields for which detailed parent information
-          is required, mapping them to `object`, or True to include all. Defaults to None.
-        :param detailed_children: A set of model fields for which detailed child information
-          is required, mapping them to `object[]`, or True to include all. Defaults to None.
-        :param use_joins: A boolean indicating whether to use joins for relations.
-          Defaults to False.
-        :param override_id: A boolean indicating whether to override the default Typesense ID
-          field. Defaults to False. Not needed if the model's `id` field is passed as an
-          index field.
-
-        """
-        self.index_fields = index_fields or set()
-        self.children = children or set()
-        self.facets = facets or set()
-        self.parents = parents or set()
-        self.geopoints = geopoints or set()
-        self.use_joins = use_joins
-        self.override_id = override_id
-        self.detailed_parents = detailed_parents or set()
-        self.detailed_children = detailed_children or set()
-        self.model = model
-        self.client = client
+    def __init__(self, **kwargs: Unpack[CollectionParams]) -> None:
+        """Initializes a new instance of TypesenseCollection."""
+        self.utils = TypesenseCollectionUtils
+        self.client = kwargs.get('client')
+        self.model = kwargs['model']
         self._validate_client_and_model()
         self._handle_all()
 
     def _validate_client_and_model(self):
+        self.index_fields = kwargs.get('index_fields', set())
+        self.skip_index_fields = kwargs.get('skip_index_fields', set())
+        self.children = kwargs.get('children', set())
+        self.parents = kwargs.get('parents', set())
+        self.geopoints = kwargs.get('geopoints', set())
+        self.use_joins = kwargs.get('use_joins', False)
+        self.override_id = kwargs.get('override_id', False)
+        self._handle_fields()
+
+        self.facetable_fields = self.index_fields.union(self.parents)
+        self.facets = ensure_is_subset_or_all(
+            kwargs.get('facets', set()),
+            self.facetable_fields,
+        )
+
+        self.detailed_children = ensure_is_subset_or_all(
+            kwargs.get('detailed_children', set()),
+            self.children,
+        )
+        self.detailed_parents = ensure_is_subset_or_all(
+            kwargs.get('detailed_parents', set()),
+            self.parents,
+        )
+
+        self._handle_facets()
         if not isinstance(self.client, Client):
             raise typesense_exceptions.ConfigError(
                 'Client must be an instance of Typesense Client.',
