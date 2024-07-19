@@ -545,7 +545,7 @@ class TypesenseCollection:
                     skip_index_fields=self.skip_index_fields,
                     index_fields=self.index_fields,
                 ),
-                # 'optional': field.blank or field.null,
+                'optional': field.null,
             }
             for field in (self.index_fields | non_relations_skip_index_fields)
         ]
@@ -557,6 +557,7 @@ class TypesenseCollection:
                 'name': f'{lat.name}_{long.name}',
                 'type': 'geopoint',
                 'facet': lat in self.facets or long in self.facets,
+                'optional': lat.null or long.null,
                 'index': self.utils.is_field_indexed(
                     lat,
                     index_fields=self.index_fields,
@@ -594,6 +595,7 @@ class TypesenseCollection:
                     'type': 'object',
                     'index': reference not in self.skip_index_fields,
                     'facet': False,
+                    'optional': reference.null,
                 },
             )
 
@@ -604,6 +606,7 @@ class TypesenseCollection:
                     'type': 'object[]',
                     'index': child not in self.skip_index_fields,
                     'facet': False,
+                    'optional': child.null,
                 },
             )
 
@@ -774,6 +777,7 @@ class TypesenseCollectionUtils:
             'reference': f'{related_model_name_snake_case}.{related_field.name}',
             'index': field not in skip_index_fields,
             'facet': field in facets,
+            'optional': field.null,
         }
 
     @staticmethod

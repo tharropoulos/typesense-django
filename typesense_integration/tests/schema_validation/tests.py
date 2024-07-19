@@ -48,6 +48,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'auto_field',
                     'type': 'int32',
@@ -70,6 +71,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'big_integer_field',
                     'type': 'int64',
@@ -104,6 +106,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'boolean_field',
                     'type': 'bool',
@@ -126,6 +129,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'char_field',
                     'type': 'string',
@@ -148,6 +152,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'date_field',
                     'type': 'int64',
@@ -170,6 +175,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'date_time_field',
                     'type': 'int64',
@@ -192,6 +198,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'decimal_field',
                     'type': 'float32',
@@ -214,6 +221,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'decimal_field_large_decimals',
                     'type': 'float64',
@@ -236,6 +244,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'decimal_field_large_digits',
                     'type': 'float64',
@@ -270,6 +279,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'email_field',
                     'type': 'string',
@@ -304,6 +314,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'file_path_field',
                     'type': 'string',
@@ -326,6 +337,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'float_field',
                     'type': 'float32',
@@ -348,6 +360,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'generic_ip_address_field',
                     'type': 'string',
@@ -382,6 +395,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'integer_field',
                     'type': 'int32',
@@ -404,6 +418,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'json_field',
                     'type': 'string',
@@ -426,6 +441,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'positive_big_integer_field',
                     'type': 'int64',
@@ -448,6 +464,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'positive_integer_field',
                     'type': 'int32',
@@ -470,6 +487,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'positive_small_integer_field',
                     'type': 'int32',
@@ -492,6 +510,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'slug_field',
                     'type': 'string',
@@ -514,6 +533,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'small_integer_field',
                     'type': 'int32',
@@ -536,6 +556,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'text_field',
                     'type': 'string',
@@ -570,6 +591,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'url_field',
                     'type': 'string',
@@ -592,6 +614,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'big_auto_field',
                     'type': 'int64',
@@ -614,6 +637,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'small_auto_field',
                     'type': 'int32',
@@ -636,6 +660,7 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'uuid_field',
                     'type': 'string',

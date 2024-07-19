@@ -64,6 +64,7 @@ class DefaultSortingFieldTests(TypesenseCollectionTestCase):
                     'name': 'number',
                     'type': 'int32',
                     'facet': False,
+                    'optional': False,
                     'index': False,
                 },
             ],

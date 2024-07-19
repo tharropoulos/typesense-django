@@ -56,6 +56,7 @@ class JoinsTests(TypesenseCollectionTestCase):
                     'reference': 'author.id',
                     'type': 'string',
                     'facet': False,
+                    'optional': False,
                     'index': True,
                 },
             ],
@@ -88,6 +89,7 @@ class JoinsTests(TypesenseCollectionTestCase):
             [
                 {
                     'facet': False,
+                    'optional': False,
                     'index': True,
                     'name': 'reference_number',
                     'reference': 'reference.number',

@@ -49,12 +49,14 @@ class DetailedRelationTests(TypesenseCollectionTestCase):
                     'type': 'object',
                     'index': True,
                     'facet': False,
+                    'optional': False,
                 },
                 {
                     'name': 'chapter',
                     'type': 'object[]',
                     'index': True,
                     'facet': False,
+                    'optional': True,
                 },
             ],
         )
@@ -100,13 +102,21 @@ class DetailedRelationTests(TypesenseCollectionTestCase):
                     'reference': 'author.id',
                     'index': True,
                     'facet': False,
+                    'optional': False,
                 },
-                {'name': 'author', 'type': 'object', 'index': True, 'facet': False},
+                {
+                    'name': 'author',
+                    'type': 'object',
+                    'index': True,
+                    'facet': False,
+                    'optional': False,
+                },
                 {
                     'name': 'chapter',
                     'type': 'object[]',
                     'index': True,
                     'facet': False,
+                    'optional': True,
                 },
             ],
         )
@@ -151,6 +161,7 @@ class DetailedRelationTests(TypesenseCollectionTestCase):
                     'type': 'object',
                     'index': True,
                     'facet': False,
+                    'optional': False,
                 },
             ],
         )

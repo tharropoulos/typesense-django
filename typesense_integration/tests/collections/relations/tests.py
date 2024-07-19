@@ -43,6 +43,7 @@ class RelationTests(TypesenseCollectionTestCase):
                     'reference': 'custom_name.id',
                     'type': 'string',
                     'facet': False,
+                    'optional': False,
                     'index': True,
                 },
             ],
