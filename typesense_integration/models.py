@@ -304,9 +304,7 @@ class TypesenseCollection:
             return self.client.collections.create(schema)  # type: ignore[union-attr]
         except typesense_exceptions.ObjectAlreadyExists:
             warnings.warn(
-                'Collection {name} already exists.'.format(
-                    name=self.name,
-                ),
+                f'Collection {self.name} already exists.',
                 UserWarning,
                 stacklevel=2,
             )
@@ -389,9 +387,7 @@ class TypesenseCollection:
 
         if intersection:
             raise typesense_exceptions.RequestMalformed(
-                'Fields {fields} are present in both index and skip index fields.'.format(
-                    fields=intersection,
-                ),
+                f'Fields {intersection} are present in both index and skip index fields.',
             )
 
     def _handle_geopoints_in_index_fields(self) -> None:
@@ -414,9 +410,7 @@ class TypesenseCollection:
         relations = self.utils.get_relation_fields_in_set(self.index_fields)  # type: ignore[arg-type]
         if relations:
             raise typesense_exceptions.RequestMalformed(
-                'Relations {relations} are not allowed in index fields.'.format(
-                    relations=relations,
-                ),
+                f'Relations {relations} are not allowed in index fields.',
             )
 
     def _handle_geopoints(self) -> None:
@@ -455,17 +449,21 @@ class TypesenseCollection:
 
         if mismatched_parents:
             raise typesense_exceptions.RequestMalformed(
-                'Model {model} has no foreign relations {relations}.'.format(
-                    model=self.model._meta.model,
-                    relations=mismatched_parents,
+                ' '.join(
+                    [
+                        f'Model {self.model._meta.model} has no foreign relations',
+                        f'{mismatched_parents}.',
+                    ],
                 ),
             )
 
         if mismatched_children:
             raise typesense_exceptions.RequestMalformed(
-                'Model {model} has no foreign relations {relations}.'.format(
-                    model=self.model._meta.model,
-                    relations=mismatched_children,
+                ' '.join(
+                    [
+                        f'Model {self.model._meta.model} has no foreign relations',
+                        f'{mismatched_parents}.',
+                    ],
                 ),
             )
 
@@ -819,9 +817,11 @@ class TypesenseCollectionUtils:
         typesense_type = valid_types.get(field.__class__)
         if not typesense_type:
             raise typesense_exceptions.RequestMalformed(
-                'Field type for {field} is not supported. Supported types: \n {types}'.format(
-                    field=field,
-                    types=valid_types.keys(),
+                '\n'.join(
+                    [
+                        f'Field type for {field} is not supported. Supported types:',
+                        f'{valid_types}',
+                    ],
                 ),
             )
 
@@ -1073,9 +1073,7 @@ class TypesenseCollectionUtils:
 
         if field.many_to_many:
             raise typesense_exceptions.RequestMalformed(
-                'Implicit Many to many field {field} is not allowed.'.format(
-                    field=field,
-                ),
+                f'Implicit Many to many field {field} is not allowed.',
             )
 
         if isinstance(field, models.ForeignKey) and field.many_to_one:
