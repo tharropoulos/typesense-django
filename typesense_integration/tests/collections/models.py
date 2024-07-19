@@ -104,3 +104,11 @@ class VerboseRelation(models.Model):
         VerboseName,
         on_delete=models.CASCADE,
     )
+
+
+class OptionalFields(models.Model):
+    optional = models.CharField(max_length=100, null=True)
+    optional_lat = models.FloatField(null=True)
+    optional_long = models.DecimalField(max_digits=9, decimal_places=6, null=True)
+    optional_ref = models.ForeignKey(Reference, on_delete=models.CASCADE, null=True)
+    required_lat = models.FloatField()

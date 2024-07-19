@@ -8,6 +8,7 @@ from typesense_integration.models import TypesenseCollection
 from typesense_integration.tests.collections.models import (
     Book,
     GeoPoint,
+    OptionalFields,
     Reader,
     VerboseName,
     VerboseRelation,
@@ -1107,3 +1108,61 @@ class SchemaGenerationTests(TestCase):
         )
 
         self.typesense_client.collections['geo_point'].delete()
+
+    def test_generate_schema_optional_fields(self) -> None:
+        """Test Schema Generation."""
+        collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=OptionalFields,
+            index_fields={
+                OptionalFields._meta.get_field('optional'),
+            },
+        )
+
+        schema = collection.generate_schema()
+
+        actual = collection.create()
+
+        self.assertEqual(
+            schema,
+            {
+                'name': 'optional_fields',
+                'fields': [
+                    {
+                        'name': 'optional',
+                        'type': 'string',
+                        'facet': False,
+                        'index': True,
+                        'optional': True,
+                    },
+                ],
+            },
+        )
+
+        actual.pop('created_at')
+        self.assertEqual(
+            actual,
+            {
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'optional',
+                        'optional': True,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                ],
+                'name': 'optional_fields',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['optional_fields'].delete()
