@@ -114,7 +114,7 @@ class CollectionParams(TypedDict):
         set[models.ForeignKey[models.Model, models.Model]] | Literal[True]
     ]
     detailed_children: NotRequired[set[models.ManyToOneRel] | Literal[True]]
-    default_sorting_field: NotRequired[SortableField | None]
+    default_sorting_field: NotRequired[models.Field[Any, Any] | None]
     use_joins: NotRequired[bool]
     override_id: NotRequired[bool]
 
@@ -332,8 +332,8 @@ class TypesenseCollection:
 
     def _handle_default_sorting_field(
         self,
-        field: SortableField | None,
-    ) -> SortableField | None:
+        field: models.Field[Any, Any] | None,
+    ) -> models.Field[Any, Any] | None:
         """Handle the default sorting field."""
         if field is None:
             return None
@@ -351,9 +351,9 @@ class TypesenseCollection:
                 'Default sorting field must be present schema.',
             )
 
-        if field.__class__ not in self.mapped_sortable_types:
+        if field not in self.sorting_fields:
             raise typesense_exceptions.RequestMalformed(
-                'Default sorting field must be of type Integer, Float or Decimal.',
+                'Default sorting field must be present in sorting fields.',
             )
 
         return field
