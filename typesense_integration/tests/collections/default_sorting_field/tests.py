@@ -63,35 +63,13 @@ class DefaultSortingFieldTests(TypesenseCollectionTestCase):
         """Test that it raises if default sorting field is not in indexed fields."""
         mock_client_instance = self.mock_client()
 
-        collection = TypesenseCollection(
-            client=mock_client_instance,
-            model=Reference,
-            skip_index_fields={Reference._meta.get_field('number')},
-            default_sorting_field=Reference._meta.get_field('number'),
-        )
-
-        self.assertEqual(
-            collection.default_sorting_field,
-            Reference._meta.get_field('number'),
-        )
-
-        self.assertEqual(
-            collection.skip_index_fields,
-            {Reference._meta.get_field('number')},
-        )
-
-        self.assertEqual(
-            collection.typesense_fields,
-            [
-                {
-                    'name': 'number',
-                    'type': 'int32',
-                    'facet': False,
-                    'optional': False,
-                    'index': False,
-                },
-            ],
-        )
+        with self.assertRaises(typesense_exceptions.RequestMalformed):
+            TypesenseCollection(
+                client=mock_client_instance,
+                model=Reference,
+                skip_index_fields={Reference._meta.get_field('number')},
+                default_sorting_field=Reference._meta.get_field('number'),
+            )
 
     def test_raises_default_sorting_field_not_in_model(self) -> None:
         """Test that it raises if default sorting field is not in model."""
