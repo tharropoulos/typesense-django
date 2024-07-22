@@ -1,9 +1,9 @@
-name: Lint
+name: Lint and format
 
 on: [push, pull_request]
 
 jobs:
-  lint:
+  lint-and-format:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +19,12 @@ jobs:
 
     - name: Install dependencies
       run: poetry install
+
+    - name: Format
+      run: poetry run black ./typesense_integration --config pyproject.toml
+
+    - name: Organize Imports
+      run: poetry run isort ./typesense_integration --profile black
 
     - name: Lint
       run: poetry run flake8 ./typesense_integration
