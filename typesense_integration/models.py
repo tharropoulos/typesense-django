@@ -83,6 +83,8 @@ class CollectionParams(TypedDict):
     :param geopoints: A set of model fields representing geopoints. Should not be included
         in `index_fields`. Defaults to None.
     :param children: A set of model fields representing child relations. Defaults to None.
+    :param sorting_fields: A set of model fields to be used for sorting, or True to include all.
+        If none are provided, number types will be used. Defaults to None.
     :param facets: A set of model fields to be used as facets, or True to include all.
         Defaults to None.
     :param detailed_parents: A set of model fields for which detailed parent information
@@ -106,6 +108,7 @@ class CollectionParams(TypedDict):
     parents: NotRequired[set[models.ForeignKey[models.Model, models.Model]]]
     geopoints: NotRequired[set[Geopoint]]
     children: NotRequired[set[models.ManyToOneRel]]
+    sorting_fields: NotRequired[set[models.Field[Any, Any]] | Literal[True]]
     facets: NotRequired[
         set[models.Field[Any, Any] | models.ForeignKey[models.Model, models.Model]]
         | Literal[True]
@@ -174,6 +177,7 @@ Geopoint = Tuple[
     models.FloatField[Any, Any] | models.DecimalField[Any, Any],
     models.FloatField[Any, Any] | models.DecimalField[Any, Any],
 ]
+
 
 SortableField = Union[
     models.IntegerField[Any, Any],
@@ -261,6 +265,19 @@ class TypesenseCollection:
 
         self._handle_fields()
 
+        self.sortable_fields = {
+            field
+            for field in self.index_fields
+            if field.__class__ in self.mapped_sortable_types
+            and isinstance(field, models.Field)
+        }
+
+        self.sorting_fields = ensure_is_subset_or_all(
+            kwargs.get('sorting_fields', self.sortable_fields),
+            self.index_fields,
+        )
+
+        self._handle_sorting_fields()
         self.default_sorting_field = self._handle_default_sorting_field(
             kwargs.get('default_sorting_field', None),
         )
@@ -328,6 +345,18 @@ class TypesenseCollection:
         if not issubclass(self.model, models.Model):
             raise typesense_exceptions.ConfigError(
                 'Model must be an instance of the default models.Model class.',
+            )
+
+    def _handle_sorting_fields(self) -> None:
+        """
+        Handle sorting fields.
+
+        :raises Typesense.Exceptions.RequestMalformed: If sorting fields are not present in
+         index fields.
+        """
+        if any(field not in self.index_fields for field in self.sorting_fields):
+            raise typesense_exceptions.RequestMalformed(
+                'Sorting fields must be present in index fields.',
             )
 
     def _handle_default_sorting_field(
@@ -555,6 +584,10 @@ class TypesenseCollection:
                     index_fields=self.index_fields,
                 ),
                 'optional': field.null,
+                'infix': False,
+                'locale': '',
+                'sort': field in self.sorting_fields,
+                'stem': False,
             }
             for field in (self.index_fields | non_relations_skip_index_fields)
         ]
@@ -567,6 +600,10 @@ class TypesenseCollection:
                 'type': 'geopoint',
                 'facet': lat in self.facets or long in self.facets,
                 'optional': lat.null or long.null,
+                'infix': False,
+                'locale': '',
+                'sort': lat in self.sorting_fields or long in self.sorting_fields,
+                'stem': False,
                 'index': self.utils.is_field_indexed(
                     lat,
                     index_fields=self.index_fields,
@@ -594,6 +631,7 @@ class TypesenseCollection:
                         model=self.model,
                         skip_index_fields=self.skip_index_fields,
                         valid_types=self.mapped_field_types,
+                        sorting_fields=self.sorting_fields,
                     ),
                 )
 
@@ -604,7 +642,11 @@ class TypesenseCollection:
                     'type': 'object',
                     'index': reference not in self.skip_index_fields,
                     'facet': False,
+                    'locale': '',
+                    'sort': False,
                     'optional': reference.null,
+                    'infix': False,
+                    'stem': False,
                 },
             )
 
@@ -615,7 +657,11 @@ class TypesenseCollection:
                     'type': 'object[]',
                     'index': child not in self.skip_index_fields,
                     'facet': False,
+                    'stem': False,
                     'optional': child.null,
+                    'infix': False,
+                    'sort': False,
+                    'locale': '',
                 },
             )
 
@@ -748,6 +794,7 @@ class TypesenseCollectionUtils:
         ],
         field: models.ForeignKey[models.Model, models.Model],
         valid_types: dict[type[models.Field[Any, Any]], str],
+        sorting_fields: set[models.Field[Any, Any]],
     ) -> APIField:
         """
         Create a Typesense field for a foreign key.
@@ -785,6 +832,10 @@ class TypesenseCollectionUtils:
             ),
             'reference': f'{related_model_name_snake_case}.{related_field.name}',
             'index': field not in skip_index_fields,
+            'infix': False,
+            'locale': '',
+            'sort': field in sorting_fields,
+            'stem': False,
             'facet': field in facets,
             'optional': field.null,
         }
