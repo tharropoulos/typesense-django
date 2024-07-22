@@ -372,6 +372,11 @@ class TypesenseCollection:
                 'Default sorting field cannot be the ID field.',
             )
 
+        if field.null:
+            raise typesense_exceptions.RequestMalformed(
+                'Default sorting field cannot be nullable.',
+            )
+
         if (
             field not in self.non_relation_model_fields
             and field not in self.index_fields
