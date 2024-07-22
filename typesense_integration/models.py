@@ -193,11 +193,19 @@ class TypesenseCollection:
     }
 
     mapped_sortable_types: ClassVar[set[type[models.Field[Any, Any]]]] = {
-        models.FloatField,
-        models.DecimalField,
+        models.AutoField,
         models.IntegerField,
+        models.BigIntegerField,
+        models.PositiveBigIntegerField,
+        models.PositiveSmallIntegerField,
+        models.PositiveIntegerField,
+        models.FloatField,
         models.DateField,
         models.DateTimeField,
+        models.DecimalField,
+        models.SmallAutoField,
+        models.BigAutoField,
+        models.SmallIntegerField,
     }
 
     # TODO: add image search
