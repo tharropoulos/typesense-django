@@ -12,6 +12,7 @@ from typing import (
     TypeVar,
     Union,
     Unpack,
+    cast,
 )
 
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -149,6 +150,19 @@ class APIField(TypedDict):
     optional: NotRequired[bool]
     locale: NotRequired[str]
     sort: NotRequired[bool]
+
+
+class DropAPIField(TypedDict):
+    """
+    Drop Field from TypesenseSchema .
+
+    :param name: The name of the field.
+    :param drop: Drop the field.
+
+    """
+
+    name: str
+    drop: Literal[True]
 
 
 class APICollection(TypedDict):
@@ -336,6 +350,119 @@ class TypesenseCollection:
                 UserWarning,
                 stacklevel=2,
             )
+
+    def update(self) -> Any:
+        """Update the collection with Typesense."""
+        schema = self.generate_schema()
+        original_schema = cast(APICollection, self.client.collections[self.name].retrieve())  # type: ignore[union-attr]
+
+        dropped_fields = self._handle_dropped_values(schema, original_schema)
+        updated_fields = self._handle_updated_fields(schema, original_schema)
+
+        if self.default_sorting_field:
+            warnings.warn(
+                ' '.join(
+                    [
+                        'At the moment only field values can be changed,',
+                        'skipping default sorting field.',
+                    ],
+                ),
+                UserWarning,
+                stacklevel=2,
+            )
+
+        if not dropped_fields and not updated_fields:
+            warnings.warn(
+                ' '.join(
+                    [
+                        'No schema changes detected',
+                        'skipping update.',
+                    ],
+                ),
+                UserWarning,
+                stacklevel=2,
+            )
+            return None
+
+        try:
+            return self.client.collections[self.name].update({'fields': dropped_fields + updated_fields})  # type: ignore[union-attr]
+        except typesense_exceptions.ObjectNotFound:
+            raise typesense_exceptions.ObjectNotFound(
+                f'Collection {self.name} does not exist.',
+            )
+
+    def _find_dropped_values(
+        self,
+        schema: APICollection,
+        original_schema: APICollection,
+    ) -> list[APIField]:
+        """Find dropped values."""
+        updated_fields = schema['fields']
+        original_fields = original_schema['fields']
+
+        updated_field_names = {field['name'] for field in updated_fields}
+        return [
+            field
+            for field in original_fields
+            if field['name'] not in updated_field_names
+        ]
+
+    def _find_updated_fields(
+        self,
+        schema: APICollection,
+        original_schema: APICollection,
+    ) -> tuple[list[APIField], list[APIField]]:
+        """Find updated fields."""
+        fields = {field['name']: field for field in schema['fields']}
+
+        original_fields = {field['name']: field for field in original_schema['fields']}
+
+        updated_fields = []
+        new_fields = []
+
+        for key, field in fields.items():
+            if field.get('reference'):
+                raise typesense_exceptions.RequestMalformed(
+                    ' '.join(
+                        [
+                            'Updating reference fields is not supported.',
+                        ],
+                    ),
+                )
+
+            if key in original_fields and field != original_fields[key]:
+                updated_fields.append(field)
+            elif key not in original_fields:
+                new_fields.append(field)
+
+        return (updated_fields, new_fields)
+
+    def _handle_updated_fields(
+        self,
+        schema: APICollection,
+        original_schema: APICollection,
+    ) -> list[APIField | DropAPIField]:
+        """Handle updated fields."""
+        updated_fields, new_fields = self._find_updated_fields(schema, original_schema)
+
+        res: list[APIField | DropAPIField] = []
+
+        for field in updated_fields:
+            res.append(field)
+            res.append({'name': field['name'], 'drop': True})
+
+        res.extend(new_fields)
+        return res
+
+    def _handle_dropped_values(
+        self,
+        schema: APICollection,
+        original_schema: APICollection,
+    ) -> list[DropAPIField]:
+        """Handle dropped values."""
+        dropped_fields = self._find_dropped_values(schema, original_schema)
+
+        return [{'name': field['name'], 'drop': True} for field in dropped_fields]
 
     def _validate_client_and_model(self) -> None:
         if not isinstance(self.client, Client):
