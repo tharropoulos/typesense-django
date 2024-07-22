@@ -9,6 +9,7 @@ from typesense_integration.models import TypesenseCollection
 from typesense_integration.tests.collections.models import (
     Book,
     GeoPoint,
+    MultipleSortableFields,
     OptionalFields,
     Reader,
     VerboseName,
@@ -1300,3 +1301,49 @@ class SchemaGenerationTests(TestCase):
         )
 
         self.typesense_client.collections['optional_fields'].delete()
+
+    def test_generate_schema_explicit_sorting_fields(self) -> None:
+        """Test Schema Generation with explicit sorting fields."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            sorting_fields={
+                Book._meta.get_field('published_date'),
+                Book._meta.get_field('title'),
+            },
+        )
+
+        schema = original_collection.generate_schema()
+
+        actual = original_collection.create()
+
+        self.assertEqual(
+            schema,
+            {
+                'name': 'book',
+                'fields': [
+                    {
+                        'name': 'title',
+                        'type': 'string',
+                        'facet': False,
+                        'sort': True,
+                        'locale': '',
+                        'infix': False,
+                        'stem': False,
+                        'index': True,
+                        'optional': False,
+                    },
+                    {
+                        'name': 'published_date',
+                        'type': 'int64',
+                        'facet': False,
+                        'sort': True,
+                        'locale': '',
+                        'infix': False,
+                        'stem': False,
+                        'index': True,
+                        'optional': False,
+                    },
+                ],
+            },
+        )
