@@ -384,8 +384,9 @@ class TypesenseCollection:
             )
             return None
 
+        fields_dict = {'fields': dropped_fields + updated_fields}
         try:
-            return self.client.collections[self.name].update({'fields': dropped_fields + updated_fields})  # type: ignore[union-attr]
+            return self.client.collections[self.name].update(fields_dict)  # type: ignore[union-attr]
         except typesense_exceptions.ObjectNotFound:
             raise typesense_exceptions.ObjectNotFound(
                 f'Collection {self.name} does not exist.',

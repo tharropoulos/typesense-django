@@ -19,6 +19,5 @@ class TypesenseCollectionTestCase(TestCase):
         )  # Ensure all patches are stopped after each test
 
     def mock_client(self) -> Client:
-        """Helper method to initialize the collection with a fresh mock client."""
+        """Initialize the collection with a fresh mock client."""
         return mock.create_autospec(Client)
-

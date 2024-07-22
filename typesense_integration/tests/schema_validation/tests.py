@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import pdb
 from unittest import mock
 
 from django.test import TestCase

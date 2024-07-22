@@ -83,7 +83,6 @@ class ManyToManyRightImplicit(models.Model):
 class Wrong:
     def __init__(self) -> None:
         """This is not a model class."""
-        pass
 
 
 class GeoPoint(models.Model):
