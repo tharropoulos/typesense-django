@@ -1,0 +1,30 @@
+name: Lint and format
+
+on: [push, pull_request]
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.x'
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Format
+      run: poetry run black ./typesense_integration --config pyproject.toml
+
+    - name: Organize Imports
+      run: poetry run isort ./typesense_integration --profile black
+
+    - name: Lint
+      run: poetry run flake8 ./typesense_integration

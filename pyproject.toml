@@ -19,6 +19,12 @@ flake8-bugbear = "^24.4.26"
 pillow = "^10.4.0"
 mypy = "^1.10.1"
 django-stubs = { version = "^5.0.2", extras = ["compatible-mypy"] }
+black = "^24.4.2"
+
+
+[tool.black]
+line-length = 88
+skip-string-normalization = true
 
 
 

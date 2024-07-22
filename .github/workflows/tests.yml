@@ -1,0 +1,47 @@
+name: Tests
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        typesense-version: ['26.0']
+        typesense-port: ['8108:8108']
+
+    services:
+      typesense:
+        image: typesense/typesense:${{ matrix.typesense-version }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12.x'
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Start Typesense
+      run: |
+        docker run -d \
+        -p ${{ matrix.typesense-port }} \
+        --name typesense \
+        -v /tmp/typesense:/data \
+        typesense/typesense:${{ matrix.typesense-version}} \
+        --api-key=xyz \
+        --data-dir /data \
+        --enable-cors
+
+    - name: Curl Typesense
+      run: sleep 10 && curl http://localhost:8108/health
+
+    - name: Run tests
+      run: poetry run ./manage.py test
+
