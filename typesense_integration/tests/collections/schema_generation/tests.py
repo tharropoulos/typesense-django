@@ -1348,6 +1348,45 @@ class SchemaGenerationTests(TestCase):
             },
         )
 
+        actual.pop('created_at')
+        self.assertEqual(
+            actual,
+            {
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': True,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['book'].delete()
+
     def test_update_schema(self) -> None:
         """Test Schema Update."""
         original_collection = TypesenseCollection(
