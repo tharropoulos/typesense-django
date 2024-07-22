@@ -279,9 +279,11 @@ class TypesenseCollection:
             self.parents,
         )
 
-        self.has_email = any(
-            field.__class__ == models.EmailField for field in self.index_fields
+        self.has_email = self.utils.has_field_type_in_set(
+            field_set=self.index_fields,
+            field_type=models.EmailField,
         )
+
         self._handle_facets()
         self.typesense_fields = self._handle_typesense_fields()
         self.typesense_relations = self._handle_typesense_relations()
@@ -1092,3 +1094,19 @@ class TypesenseCollectionUtils:
             return {'child': field}
 
         return {}
+
+    @staticmethod
+    def has_field_type_in_set(
+        field_set: set[models.Field[Any, Any]],
+        field_type: type[models.Field[Any, Any]],
+    ) -> bool:
+        """
+        Check if a set has a field of a specific type.
+
+        :param field_set: The set to check.
+        :param field_type: The field type to check for.
+
+        :return: True if the set has a field of the specific type, False otherwise.
+
+        """
+        return any(isinstance(field, field_type) for field in field_set)
