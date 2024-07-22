@@ -170,11 +170,9 @@ class APICollection(TypedDict):
     token_separators: NotRequired[list[str]]
 
 
-Geopoint = Union[
-    Tuple[
-        models.FloatField[Any, Any] | models.DecimalField[Any, Any],
-        models.FloatField[Any, Any] | models.DecimalField[Any, Any],
-    ],
+Geopoint = Tuple[
+    models.FloatField[Any, Any] | models.DecimalField[Any, Any],
+    models.FloatField[Any, Any] | models.DecimalField[Any, Any],
 ]
 
 SortableField = Union[
