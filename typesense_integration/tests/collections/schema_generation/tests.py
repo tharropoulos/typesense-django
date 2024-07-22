@@ -1347,3 +1347,562 @@ class SchemaGenerationTests(TestCase):
                 ],
             },
         )
+
+    def test_update_schema(self) -> None:
+        """Test Schema Update."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+        )
+
+        original_on_server = original_collection.create()
+
+        created_at = original_on_server.get('created_at')
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['book'].documents.create(
+            {
+                'title': 'The Great Gatsby',
+                'published_date': 1925,
+            },
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            index_fields={
+                Book._meta.get_field('published_date'),
+            },
+        )
+
+        updated_collection.update()
+
+        updated_on_server = self.typesense_client.collections['book'].retrieve()
+
+        self.assertEqual(
+            updated_on_server,
+            {
+                'created_at': created_at,
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 1,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['book'].delete()
+
+    def test_update_schema_with_default_sorting_field(self) -> None:
+        """
+        Test Schema Update with change to the default sorting field.
+
+        It should warn the user as updating the schema only allows for field changes, and
+        not change the default sorting field
+        """
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=MultipleSortableFields,
+            default_sorting_field=MultipleSortableFields._meta.get_field('first'),
+        )
+
+        original_on_server = original_collection.create()
+
+        created_at = original_on_server.get('created_at')
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': 'first',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'second',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'name',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'first',
+                        'optional': False,
+                        'sort': True,
+                        'stem': False,
+                        'type': 'int32',
+                    },
+                ],
+                'name': 'multiple_sortable_fields',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['multiple_sortable_fields'].documents.create(
+            {'first': 32, 'second': 200, 'name': 'test'},
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=MultipleSortableFields,
+            default_sorting_field=MultipleSortableFields._meta.get_field('second'),
+        )
+
+        with self.assertWarns(UserWarning):
+            updated_collection.update()
+            updated_on_server = self.typesense_client.collections[
+                'multiple_sortable_fields'
+            ].retrieve()
+
+            self.assertEqual(
+                updated_on_server,
+                {
+                    'created_at': created_at,
+                    'default_sorting_field': 'first',
+                    'enable_nested_fields': False,
+                    'fields': [
+                        {
+                            'facet': False,
+                            'sort': True,
+                            'index': True,
+                            'infix': False,
+                            'locale': '',
+                            'name': 'second',
+                            'optional': False,
+                            'stem': False,
+                            'type': 'int64',
+                        },
+                        {
+                            'facet': False,
+                            'index': True,
+                            'infix': False,
+                            'locale': '',
+                            'name': 'name',
+                            'optional': False,
+                            'sort': False,
+                            'stem': False,
+                            'type': 'string',
+                        },
+                        {
+                            'facet': False,
+                            'index': True,
+                            'infix': False,
+                            'locale': '',
+                            'name': 'first',
+                            'optional': False,
+                            'sort': True,
+                            'stem': False,
+                            'type': 'int32',
+                        },
+                    ],
+                    'name': 'multiple_sortable_fields',
+                    'num_documents': 1,
+                    'symbols_to_index': [],
+                    'token_separators': [],
+                },
+            )
+
+    def test_update_schema_skip_index_fields(self) -> None:
+        """Test Schema Update."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            default_sorting_field=Book._meta.get_field('published_date'),
+        )
+
+        original_on_server = original_collection.create()
+
+        created_at = original_on_server.get('created_at')
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': 'published_date',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+        self.typesense_client.collections['book'].documents.create(
+            {
+                'title': 'The Great Gatsby',
+                'published_date': 1925,
+            },
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            skip_index_fields={Book._meta.get_field('published_date')},
+        )
+
+        updated_collection.update()
+        updated_on_server = self.typesense_client.collections['book'].retrieve()
+
+        self.assertEqual(
+            updated_on_server,
+            {
+                'created_at': created_at,
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'sort': False,
+                        'index': False,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 1,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['book'].delete()
+
+    def test_update_schema_facets(self) -> None:
+        """Test Schema Update."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            default_sorting_field=Book._meta.get_field('published_date'),
+        )
+
+        original_on_server = original_collection.create()
+
+        created_at = original_on_server.get('created_at')
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': 'published_date',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': False,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': False,
+                        'sort': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+        self.typesense_client.collections['book'].documents.create(
+            {
+                'title': 'The Great Gatsby',
+                'published_date': 1925,
+            },
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=Book,
+            facets=True,
+        )
+
+        updated_collection.update()
+        updated_on_server = self.typesense_client.collections['book'].retrieve()
+
+        self.assertEqual(
+            updated_on_server,
+            {
+                'created_at': created_at,
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'facet': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'title',
+                        'optional': False,
+                        'sort': False,
+                        'stem': False,
+                        'type': 'string',
+                    },
+                    {
+                        'facet': True,
+                        'index': True,
+                        'infix': False,
+                        'locale': '',
+                        'name': 'published_date',
+                        'optional': False,
+                        'sort': True,
+                        'stem': False,
+                        'type': 'int64',
+                    },
+                ],
+                'name': 'book',
+                'num_documents': 1,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+    def test_update_schema_subsequent_joins(self) -> None:
+        """Test Schema Update with a JOIN after initialization."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=OptionalFields,
+            index_fields={
+                OptionalFields._meta.get_field('optional'),
+            },
+        )
+
+        original_on_server = original_collection.create()
+
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'name': 'optional',
+                        'type': 'string',
+                        'facet': False,
+                        'sort': False,
+                        'locale': '',
+                        'infix': False,
+                        'stem': False,
+                        'index': True,
+                        'optional': True,
+                    },
+                ],
+                'name': 'optional_fields',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['optional_fields'].documents.create(
+            {
+                'optional': 'The Great Gatsby',
+            },
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=OptionalFields,
+            use_joins=True,
+        )
+        with self.assertRaises(typesense_exceptions.RequestMalformed):
+            updated_collection.update()
+
+        self.typesense_client.collections['optional_fields'].delete()
+
+    def test_update_schema_update_joins(self) -> None:
+        """Test Schema Update."""
+        original_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=OptionalFields,
+            parents={
+                OptionalFields._meta.get_field('optional_ref'),
+            },
+            index_fields={
+                OptionalFields._meta.get_field('optional'),
+            },
+            use_joins=True,
+        )
+
+        original_on_server = original_collection.create()
+
+        original_on_server.pop('created_at')
+
+        self.assertEqual(
+            original_on_server,
+            {
+                'default_sorting_field': '',
+                'enable_nested_fields': False,
+                'fields': [
+                    {
+                        'name': 'optional',
+                        'type': 'string',
+                        'facet': False,
+                        'sort': False,
+                        'locale': '',
+                        'infix': False,
+                        'stem': False,
+                        'index': True,
+                        'optional': True,
+                    },
+                    {
+                        'name': 'optional_ref_id',
+                        'type': 'string',
+                        'facet': False,
+                        'sort': False,
+                        'locale': '',
+                        'infix': False,
+                        'stem': False,
+                        'optional': True,
+                        'index': True,
+                        'reference': 'reference.id',
+                    },
+                ],
+                'name': 'optional_fields',
+                'num_documents': 0,
+                'symbols_to_index': [],
+                'token_separators': [],
+            },
+        )
+
+        self.typesense_client.collections['optional_fields'].documents.create(
+            {
+                'optional': 'The Great Gatsby',
+            },
+        )
+
+        updated_collection = TypesenseCollection(
+            client=self.typesense_client,
+            model=OptionalFields,
+            parents={
+                OptionalFields._meta.get_field('optional_ref'),
+            },
+            skip_index_fields={
+                OptionalFields._meta.get_field('optional_ref'),
+            },
+            use_joins=True,
+        )
+
+        with self.assertRaises(typesense_exceptions.RequestMalformed):
+            updated_collection.update()
