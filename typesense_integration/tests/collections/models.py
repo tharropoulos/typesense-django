@@ -112,3 +112,9 @@ class OptionalFields(models.Model):
     optional_long = models.DecimalField(max_digits=9, decimal_places=6, null=True)
     optional_ref = models.ForeignKey(Reference, on_delete=models.CASCADE, null=True)
     required_lat = models.FloatField()
+
+
+class MultipleSortableFields(models.Model):
+    first = models.IntegerField()
+    second = models.DateField()
+    name = models.CharField(max_length=100)
