@@ -220,7 +220,6 @@ class TypesenseCollection:
         models.PositiveSmallIntegerField: 'int32',
         models.PositiveIntegerField: 'int32',
         models.SlugField: 'string',
-        models.FloatField: 'float',
         models.BooleanField: 'bool',
         models.DateField: 'int64',
         models.DateTimeField: 'int64',
