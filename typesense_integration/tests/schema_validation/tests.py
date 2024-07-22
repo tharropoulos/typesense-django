@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pdb
 from unittest import mock
 
 from django.test import TestCase
@@ -48,6 +49,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'auto_field',
@@ -71,6 +76,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'big_integer_field',
@@ -106,6 +115,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'boolean_field',
@@ -129,6 +142,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'char_field',
@@ -152,6 +169,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'date_field',
@@ -175,6 +196,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'date_time_field',
@@ -198,6 +223,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'decimal_field',
@@ -221,6 +250,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'decimal_field_large_decimals',
@@ -244,6 +277,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'decimal_field_large_digits',
@@ -279,6 +316,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'email_field',
@@ -314,6 +355,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'file_path_field',
@@ -337,6 +382,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'float_field',
@@ -360,6 +409,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'generic_ip_address_field',
@@ -395,6 +448,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'integer_field',
@@ -418,6 +475,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'json_field',
@@ -441,6 +502,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'positive_big_integer_field',
@@ -464,6 +529,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'positive_integer_field',
@@ -487,6 +556,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'positive_small_integer_field',
@@ -510,6 +583,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'slug_field',
@@ -533,6 +610,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'small_integer_field',
@@ -556,6 +637,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'text_field',
@@ -591,6 +676,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'url_field',
@@ -614,6 +703,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'big_auto_field',
@@ -637,6 +730,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': True,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'small_auto_field',
@@ -660,6 +757,10 @@ class TypesenseCollectionTests(TestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'uuid_field',

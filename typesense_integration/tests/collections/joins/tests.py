@@ -56,6 +56,10 @@ class JoinsTests(TypesenseCollectionTestCase):
                     'reference': 'author.id',
                     'type': 'string',
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                 },
@@ -89,6 +93,10 @@ class JoinsTests(TypesenseCollectionTestCase):
             [
                 {
                     'facet': False,
+                    'sort': False,
+                    'locale': '',
+                    'infix': False,
+                    'stem': False,
                     'optional': False,
                     'index': True,
                     'name': 'reference_number',

@@ -141,7 +141,11 @@ class APIField(TypedDict):
     facet: NotRequired[bool]
     index: NotRequired[bool]
     reference: NotRequired[str]
+    infix: NotRequired[bool]
+    stem: NotRequired[bool]
     optional: NotRequired[bool]
+    locale: NotRequired[str]
+    sort: NotRequired[bool]
 
 
 class APICollection(TypedDict):
